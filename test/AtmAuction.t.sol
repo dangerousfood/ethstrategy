@@ -32,21 +32,21 @@ contract AtmAuctionTest is DutchAuctionTest {
   }
 
   function test_fill_success_1() public override {
-    mintAndApprove(alice, defaultAmount * defaultStartPrice, address(dutchAuction), address(usdcToken));
+    mintAndApprove(alice, defaultAmount * defaultStartPrice / 1e18, address(dutchAuction), address(usdcToken));
     super.test_fill_success_1();
 
     assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
-    assertEq(usdcToken.balanceOf(address(governor)), defaultAmount * defaultStartPrice, "usdcToken balance not assigned correctly");
+    assertEq(usdcToken.balanceOf(address(governor)), defaultAmount * defaultStartPrice / 1e18, "usdcToken balance not assigned correctly");
     assertEq(ethStrategy.balanceOf(alice), defaultAmount, "ethStrategy balance not assigned correctly");
   }
 
   function test_fill_success_2() public override {
     uint256 _amount = defaultAmount - 1;
-    mintAndApprove(alice, _amount * defaultStartPrice, address(dutchAuction), address(usdcToken));
+    mintAndApprove(alice, _amount * defaultStartPrice/1e18, address(dutchAuction), address(usdcToken));
     super.test_fill_success_2();
 
     assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
-    assertEq(usdcToken.balanceOf(address(governor)), _amount * defaultStartPrice, "usdcToken balance not assigned correctly");
+    assertEq(usdcToken.balanceOf(address(governor)), _amount * defaultStartPrice / 1e18, "usdcToken balance not assigned correctly");
     assertEq(ethStrategy.balanceOf(alice), _amount, "ethStrategy balance not assigned correctly");
   }
 
@@ -71,7 +71,7 @@ contract AtmAuctionTest is DutchAuctionTest {
     vm.assume(delta_t <= type(uint128).max / delta_p);
 
     uint128 fillPrice = calculateFillPrice(_startTime, _duration, _startPrice, _endPrice, _elapsedTime);
-    uint256 mintAmount = _amount * fillPrice;
+    uint256 mintAmount = _amount * fillPrice / 1e18;
     mintAndApprove(alice, mintAmount, address(dutchAuction), address(usdcToken));
 
     fill(_amount, _startTime, _duration, _startPrice, _endPrice, _elapsedTime, _totalAmount);

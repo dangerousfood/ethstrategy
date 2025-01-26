@@ -27,7 +27,7 @@ contract BondAuction is DutchAuction {
         if(bonds[msg.sender].startRedemption != 0) {
           revert UnredeemedBond();
         }
-        SafeTransferLib.safeTransferFrom(paymentToken, msg.sender, address(this), amount * price);
+        SafeTransferLib.safeTransferFrom(paymentToken, msg.sender, address(this), amount * price / 10**decimals);
         bonds[msg.sender] = Bond({
           amount: amount,
           price: price,
@@ -52,7 +52,7 @@ contract BondAuction is DutchAuction {
         revert RedemptionWindowPassed();
       }
       delete bonds[msg.sender];
-      SafeTransferLib.safeTransfer(paymentToken, owner(), bond.amount * bond.price);
+      SafeTransferLib.safeTransfer(paymentToken, owner(), bond.amount * bond.price / 10**decimals);
       IEthStrategy(ethStrategy).mint(msg.sender, bond.amount);
     }
 
@@ -69,7 +69,7 @@ contract BondAuction is DutchAuction {
       if(currentTime < bond.startRedemption) {
         revert RedemptionWindowNotStarted();
       }
-      SafeTransferLib.safeTransfer(paymentToken, msg.sender, bond.amount * bond.price);
+      SafeTransferLib.safeTransfer(paymentToken, msg.sender, bond.amount * bond.price / 10**decimals);
       delete bonds[msg.sender];
     }
 }
