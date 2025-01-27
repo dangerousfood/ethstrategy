@@ -32,11 +32,11 @@ contract BondAuctionTest is DutchAuctionTest {
   }
 
   function test_fill_success_1() public override {
-    mintAndApprove(alice, defaultAmount * defaultStartPrice / 1e18, address(dutchAuction), address(usdcToken));
+    mintAndApprove(alice, defaultAmount * defaultStartPrice / (10**ethStrategy.decimals()), address(dutchAuction), address(usdcToken));
     super.test_fill_success_1();
 
     assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
-    assertEq(usdcToken.balanceOf(address(dutchAuction)), defaultAmount * defaultStartPrice / 1e18, "usdcToken balance not assigned correctly");
+    assertEq(usdcToken.balanceOf(address(dutchAuction)), defaultAmount * defaultStartPrice / (10**ethStrategy.decimals()), "usdcToken balance not assigned correctly");
     BondAuction bondAuction = BondAuction(address(dutchAuction));
     (uint256 amount, uint256 price, uint256 startRedemption) = bondAuction.bonds(alice);
     assertEq(amount, defaultAmount, "amount not assigned correctly");
@@ -46,11 +46,11 @@ contract BondAuctionTest is DutchAuctionTest {
 
   function test_fill_success_2() public override {
     uint256 _amount = defaultAmount - 1;
-    mintAndApprove(alice, _amount * defaultStartPrice / 1e18, address(dutchAuction), address(usdcToken));
+    mintAndApprove(alice, _amount * defaultStartPrice / (10**ethStrategy.decimals()), address(dutchAuction), address(usdcToken));
     super.test_fill_success_2();
 
     assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
-    assertEq(usdcToken.balanceOf(address(dutchAuction)), _amount * defaultStartPrice / 1e18, "usdcToken balance not assigned correctly");
+    assertEq(usdcToken.balanceOf(address(dutchAuction)), _amount * defaultStartPrice / (10**ethStrategy.decimals()), "usdcToken balance not assigned correctly");
     BondAuction bondAuction = BondAuction(address(dutchAuction));
     (uint256 amount, uint256 price, uint256 startRedemption) = bondAuction.bonds(alice);
     assertEq(amount, _amount, "amount not assigned correctly");
@@ -67,7 +67,7 @@ contract BondAuctionTest is DutchAuctionTest {
     assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
     assertEq(ethStrategy.balanceOf(alice), defaultAmount, "ethStrategy balance not assigned correctly");
     assertEq(usdcToken.balanceOf(address(dutchAuction)), 0, "usdcToken balance not assigned correctly");
-    assertEq(usdcToken.balanceOf(address(governor)), defaultAmount * defaultStartPrice / 1e18, "usdcToken balance not assigned correctly");
+    assertEq(usdcToken.balanceOf(address(governor)), defaultAmount * defaultStartPrice / (10**ethStrategy.decimals()), "usdcToken balance not assigned correctly");
 
     (uint256 amount, uint256 price, uint256 startRedemption) = bondAuction.bonds(alice);
     assertEq(amount, 0, "amount not assigned correctly");
@@ -117,7 +117,7 @@ contract BondAuctionTest is DutchAuctionTest {
     vm.warp(block.timestamp + defaultDuration + 1);
     vm.prank(alice);
     bondAuction.withdraw();
-    assertEq(usdcToken.balanceOf(alice), defaultAmount * defaultStartPrice / 1e18, "usdcToken balance not assigned correctly");
+    assertEq(usdcToken.balanceOf(alice), defaultAmount * defaultStartPrice / (10**ethStrategy.decimals()), "usdcToken balance not assigned correctly");
     assertEq(usdcToken.balanceOf(address(dutchAuction)), 0, "usdcToken balance not assigned correctly");
     assertEq(ethStrategy.balanceOf(alice), 0, "ethStrategy balance not assigned correctly");
 
@@ -154,7 +154,7 @@ contract BondAuctionTest is DutchAuctionTest {
   function test_fill_unredeemedBond() public {
     uint64 expectedStartTime = uint64(block.timestamp);
     uint128 _amount = defaultAmount / 2;
-    mintAndApprove(alice, _amount * defaultStartPrice / 1e18, address(dutchAuction), address(usdcToken));
+    mintAndApprove(alice, _amount * defaultStartPrice / (10**ethStrategy.decimals()), address(dutchAuction), address(usdcToken));
     
     test_startAuction_success_1();
     vm.prank(alice);
@@ -172,7 +172,7 @@ contract BondAuctionTest is DutchAuctionTest {
     }
 
     assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
-    assertEq(usdcToken.balanceOf(address(dutchAuction)), _amount * defaultStartPrice / 1e18, "usdcToken balance not assigned correctly");
+    assertEq(usdcToken.balanceOf(address(dutchAuction)), _amount * defaultStartPrice / (10**ethStrategy.decimals()), "usdcToken balance not assigned correctly");
     BondAuction bondAuction = BondAuction(address(dutchAuction));
 
     {
@@ -209,7 +209,7 @@ contract BondAuctionTest is DutchAuctionTest {
     vm.assume(delta_t <= type(uint128).max / delta_p);
 
     uint128 fillPrice = calculateFillPrice(_startTime, _duration, _startPrice, _endPrice, _elapsedTime);
-    uint256 mintAmount = _amount * fillPrice / 1e18;
+    uint256 mintAmount = _amount * fillPrice / (10**ethStrategy.decimals());
     mintAndApprove(alice, mintAmount, address(dutchAuction), address(usdcToken));
 
     fill(_amount, _startTime, _duration, _startPrice, _endPrice, _elapsedTime, _totalAmount);
