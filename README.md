@@ -52,7 +52,33 @@ If $ETHSR trades at a **premium to NAV**, EtherStrategy issues new tokens to cap
   * Prevents runaway premiums by issuing tokens only when $ETHSR is overvalued.  
   * Scales the ETH pool efficiently, increasing NAV for all holders.
 
+  ### 3. Minting $ETHSR to Cover Debt
+
+In addition to the standard “convert or redeem” paths, EtherStrategy can mint new $ETHSR tokens to repay bondholders if the protocol chooses not to (or cannot) redeem the bonds in USDC. This ensures the protocol retains its ETH position without forced liquidation, at the cost of diluting existing token holders.
+
+1. **Trigger Conditions**  
+   - **Maturity or Default Scenario:** If the convertible bonds come due and the protocol lacks the USDC reserves—or prefers to preserve its ETH, governance can opt to mint new $ETHSR.  
+   - **Market-Driven Decision:** If $ETHSR trades at or above a certain threshold, minting tokens may be cheaper (in opportunity cost) than liquidating ETH from the treasury.
+
+2. **Implementation Details**  
+   - **Onchain Governance Approval:** A governance vote can trigger the minting process, ensuring transparency.  
+   - **Automated Smart Contract Flow:**
+     1. Bondholders request repayment of principal at maturity.  
+     2. The protocol decides to preserve ETH rather than sell to USDC.  
+     3. The required amount of $ETHSR is minted and sold, USDC distributed to the bondholders.  
+
+  - **Treasury Preservation:** No forced sales of ETH to cover debt.  
   
+4. **Example Flow**  
+   1. **Bond Maturity:** \$1M in convertible bonds comes due.  
+   2. **DAO Vote:** Community opts to keep treasury ETH rather than selling it.  
+   3. **Mint & Distribute:** \$1M worth of new $ETHSR is minted (based on the current token price) and sold.  
+   4. **Outcome:**
+      - The treasury retains its ETH, avoiding liquidation.  
+      - Existing $ETHSR holders get diluted, but the protocol maintains its long-term rep.
+
+By introducing this **mint-to-repay** option, EtherStrategy adds a final backstop for its convertible debt mechanism. All actions are transparent onchain and can be controlled by the community to ensure it aligns with the protocol’s long-term vision.
+
 
 ## Foundry
 
