@@ -10,7 +10,7 @@ contract BondAuctionTest is DutchAuctionTest {
         super.setUp();
         dutchAuction = new BondAuction(address(ethStrategy), address(usdcToken));
         vm.startPrank(address(initialOwner.addr));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(dutchAuction));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
         vm.stopPrank();
         vm.startPrank(address(ethStrategy));
         dutchAuction.grantRoles(admin1.addr, dutchAuction.ADMIN_ROLE());

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache 2.0
 pragma solidity ^0.8.26;
 
+
 import {BaseTest} from "./utils/BaseTest.t.sol";
 import {IGovernor} from "@openzeppelin/contracts/governance/IGovernor.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
@@ -40,11 +41,11 @@ contract DepositTest is BaseTest {
             defaultDepositCap,
             uint64(block.timestamp)
         );
-        vm.startPrank(address(initialOwner.addr));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(dutchAuction));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
-        vm.stopPrank();
+        vm.prank(address(initialOwner.addr));
+        ethStrategy.transferOwnership(address(ethStrategy));
         vm.startPrank(address(ethStrategy));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(deposit), ethStrategy.MINTER_ROLE());
         dutchAuction.grantRoles(admin1.addr, dutchAuction.ADMIN_ROLE());
         dutchAuction.grantRoles(admin2.addr, dutchAuction.ADMIN_ROLE());
         vm.stopPrank();
@@ -77,7 +78,7 @@ contract DepositTest is BaseTest {
             uint64(block.timestamp)
         );
         vm.startPrank(address(ethStrategy));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
+        ethStrategy.grantRoles(address(deposit), ethStrategy.MINTER_ROLE());
         vm.stopPrank();
         uint256 depositAmount = 1e18;
         vm.deal(alice, depositAmount);
@@ -103,7 +104,7 @@ contract DepositTest is BaseTest {
             uint64(block.timestamp + 1)
         );
         vm.startPrank(address(ethStrategy));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
+        ethStrategy.grantRoles(address(deposit), ethStrategy.MINTER_ROLE());
         vm.stopPrank();
         uint256 depositAmount = 1e18;
         bytes memory signature = getSignature(alice);
@@ -310,7 +311,7 @@ contract DepositTest is BaseTest {
         );
 
         vm.startPrank(address(ethStrategy));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
+        ethStrategy.grantRoles(address(deposit), ethStrategy.MINTER_ROLE());
         vm.stopPrank();
 
         bytes memory signature = getSignature(alice);

@@ -9,7 +9,6 @@ import {EthStrategy} from "../src/EthStrategy.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {Deposit} from "../src/Deposit.sol";
 import {console} from "forge-std/console.sol";
-
 contract Deploy is Script {
     struct Config {
         AtmAuctionConfig atmAuction;
@@ -66,12 +65,12 @@ contract Deploy is Script {
         console2.log("deployer: ", deployer);
 
         EthStrategy ethStrategy = new EthStrategy(
+            uint32(config.governor.timelockDelay),
             config.governor.quorumPercentage,
+            uint48(config.governor.voteExtension),
             uint48(config.governor.votingDelay),
             uint32(config.governor.votingPeriod),
-            config.governor.proposalThreshold,
-            uint48(config.governor.voteExtension),
-            config.governor.timelockDelay
+            config.governor.proposalThreshold
         );
         AtmAuction atmAuction = new AtmAuction(address(ethStrategy), config.atmAuction.lst);
         BondAuction bondAuction = new BondAuction(address(ethStrategy), config.bondAuction.usdc);
@@ -84,10 +83,10 @@ contract Deploy is Script {
             config.deposit.startTime
         );
 
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(atmAuction));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(bondAuction));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
-        ethStrategy.renounceRole(ethStrategy.DEFAULT_ADMIN_ROLE(), deployer);
+        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(atmAuction));
+        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(bondAuction));
+        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
+        // ethStrategy.renounceRole(ethStrategy.DEFAULT_ADMIN_ROLE(), deployer);
 
         vm.stopBroadcast();
 
