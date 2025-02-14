@@ -1,12 +1,228 @@
+# -*- mode: toml; -*-
 [profile.default]
+allow_paths = ['interfaces', 'contracts', 'src']
+include_paths = []
 src = "src"
+test = "test"
+script = "ops"
 out = "out"
 libs = ["lib"]
-fs_permissions = [{ access = "read-write", path = "./"}]
+remappings = [
+  "ds-test/=lib/forge-std/lib/ds-test/src/",
+  "forge-std/=lib/forge-std/src/",
+  "libsol/=lib/libsol/src/",
+  "solady/=lib/solady/",
+  "solmate/=lib/solmate/src/",
+]
+libraries = []
+cache = true
+force = false
+
+gas_reports = ["*"]
+gas_reports_ignore = []
+auto_detect_solc = true
+offline = false
+verbosity = 0
+
+# Ignored Error codes
+# 2018 Function state mutability can be restricted to pure
+# 3420 Source file does not specify required compiler version
+# 3716 Multiple SPDX license identifiers found in source file
+ignored_error_codes = [
+  "license",
+  "code-size",
+  "init-code-size",
+  "transient-storage",
+]
+deny_warnings = false
+build_info = true
+ffi = false
+always_use_create_2_factory = false
+# Cheatcode Handler Address
+# This is the same address as the one used in DappTools's HEVM.
+# 0x7109709ECfa91a80626fF3989D68f67F5b1DD12D
+sender = "0x1804c8ab1f12e6bbf3894d4083f33e07309d1f38"
+tx_origin = "0x1804c8ab1f12e6bbf3894d4083f33e07309d1f38"
+initial_balance = "0xffffffffffffffffffffffff"
+block_number = 1
+block_base_fee_per_gas = 7
+block_coinbase = "0x0000000000000000000000000000000000000000"
+block_prevrandao = "0x0000000000000000000000000000000000000000000000000000000000000000"
+block_timestamp = 1
+block_difficulty = 0
+# @NOTE vm.pauseGasMetering
+# {@see {@link https://github.com/foundry-rs/foundry/issues/3971} }
+# default: 134_217_728
+memory_limit = 11_149_934_592
+# max value for gas_limit is 9_223_372_036_854_775_807
+gas_limit = 9_223_372_036_854_775_807
+
+# Solidity Compiler Settings
+# Not all networks support PUSH0 = shanghai elif paris
+# This is default as of solidity 0.8.20
 evm_version = "cancun"
-optimizer_runs = 0
+
+# {@see {@link https://solidity-fr.readthedocs.io/fr/latest/using-the-compiler.html#input-description}
+# includes the contract's metadata in the contract's json artifact
+# includes the source mappings for compiled bytecode artifact
+extra_output = ['irOptimized', 'evm.assembly', 'evm.bytecode', 'evm.bytecode.generatedSources']
+# emits the output selection as separate json artifact files
+extra_output_files = ['metadata']
+names = false
+sizes = false
+optimizer = true
+optimizer_runs = 1_000
+via_ir = true
+# {@see {@link https://github.com/foundry-rs/foundry/issues/4060} }
+auto_detect_remappings = false
+# Whether to store the referenced sources in the metadata as literal data. Helps with verification
+use_literal_content = true
+# The metadata hash is machine dependent. By default, this is set to none to allow for deterministic code.
+# {@see {@link https://docs.soliditylang.org/en/latest/metadata.html} }
+bytecode_hash = "none"
+cbor_metadata = false
+# Only the required contracts/files will be selected to be included in solc's output selection.
+sparse_mode = true
+ast = false
+isolate = false
+create2_library_salt = "0x0000000000000000000000000000000000000000000000000000000000000000"
+prague = false
+unchecked_cheatcode_artifacts = false
+
+# RPC Cache Settings
+no_storage_caching = false
+no_rpc_rate_limit = false
+
+[profile.ci]
+optimizer = true
+via_ir = false
+fuzz_runs = 4_069
+force = true
+verbosity = 4
+gas_reports = ["*"]
+revert_strings = 'debug'
+extra_output = [
+  "abi",
+  "evm.bytecode",
+  "evm.deployedBytecode",
+  "evm.methodIdentifiers",
+]
+# Environment: FOUNDRY_PROMPT_TIMEOUT
+# The number of seconds to wait before vm.prompt reverts with a timeout.
+# default = 120
+prompt_timeout = 30
+seed = '0x6900000000000000000000000000000000000000000000000000000000000000'
+cache = true
+cache_path = '.cache'
+
+show_progress = false
+unchecked_cheatcode_artifacts = false
+
+
+[[profile.default.fs_permissions]]
+access = "read"
+path = "out"
+
+[profile.default.rpc_storage_caching]
+chains = "all"
+endpoints = "all"
+
+[fmt]
+# default 120
+line_length = 100
+# default 4
+tab_width = 2
+bracket_spacing = false
+int_types = "long"
+multiline_func_header = "attributes_first"
+quote_style = "double"
+number_underscore = "thousands"
+single_line_statement_blocks = "preserve"
+override_spacing = false
+wrap_comments = true
+ignore = ['*.mutant.sol', '*.vendor.sol']
+contract_new_lines = false
+# import statements are sorted alphabetically within their import groups.
+#  while preserving the relative ordering of the groups.
+sort_imports = false
+
+[doc]
+out = "docs"
+title = ""
+book = "book.toml"
+ignore = []
+
+[profile.docs]
+title = 'Protocol docs'
+# root_path variable in build-docs.sh
+src = 'src'
 
 [fuzz]
-max_test_rejects = 4294967295
+fuzz_seed = '0x3e8'
+# The number of fuzz runs for fuzz tests
+runs = 10_000
+# The maximum number of test case rejections allowed by proptest, to be
+# encountered during usage of `vm.assume` cheatcode. This will be used
+# to set the `max_global_rejects` value in proptest test runner config.
+# `max_local_rejects` option isn't exposed here since we're not using
+# `prop_filter`.
+max_test_rejects = 120000
+# The weight of the dictionary
+dictionary_weight = 40
+# The flag indicating whether to include values from storage
+include_storage = true
+# The flag indicating whether to include push bytes values
+include_push_bytes = true
+max_fuzz_dictionary_addresses = 15728640
+max_fuzz_dictionary_values = 6553600
+max_calldata_fuzz_dictionary_addresses = 0
+gas_report_samples = 256
+failure_persist_dir = "cache/fuzz"
+failure_persist_file = "failures"
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[invariant]
+# The number of runs that must execute for each invariant test group
+runs = 256
+# The number of calls executed to attempt to break invariants in one run
+depth = 500
+# Fails the invariant fuzzing if a revert occurs
+fail_on_revert = false
+# Allows overriding an unsafe external call when running invariant tests. eg. reentrancy checks
+call_override = false
+# The weight of the dictionary
+dictionary_weight = 80
+# The flag indicating whether to include values from storage
+include_storage = true
+# The flag indicating whether to include push bytes values
+include_push_bytes = true
+max_fuzz_dictionary_addresses = 15728640
+max_fuzz_dictionary_values = 6553600
+max_calldata_fuzz_dictionary_addresses = 0
+shrink_sequence = true
+# run limit max: 262144
+shrink_run_limit =  5000
+preserve_state = false
+max_assume_rejects = 65536
+gas_report_samples = 256
+failure_persist_dir = "cache/invariant"
+
+[profile.default.optimizer_details]
+constantOptimizer = true
+yul = true
+# this sets the `yulDetails` of the `optimizer_details` for the `default` profile
+[profile.default.optimizer_details.yulDetails]
+stackAllocation = true
+# ACHTUNG! Setting this is extremely dangerous
+# {@see {@link https://soliditylang.org/blog/2023/07/19/full-inliner-non-expression-split-argument-evaluation-order-bug/} }
+optimizerSteps = 'u:'
+
+# [default.model_checker]
+# contracts = { '/path/to/project/src/Contract.sol' = [ 'Contract' ] }
+# engine = 'chc'
+# timeout = 10000
+# targets = [ 'assert' ]
+
+[bind_json]
+out = "utils/JsonBindings.sol"
+include = []
+exclude = []
