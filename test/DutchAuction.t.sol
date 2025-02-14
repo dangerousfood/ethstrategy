@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import {BaseTest} from "./utils/BaseTest.t.sol";
 import {DutchAuction} from "../../src/DutchAuction.sol";
 import {Ownable} from "solady/src/auth/OwnableRoles.sol";
+import {SignatureCheckerLib} from "solady/src/utils/SignatureCheckerLib.sol";
 
 contract DutchAuctionTest is BaseTest {
     DutchAuction dutchAuction;
@@ -13,18 +14,21 @@ contract DutchAuctionTest is BaseTest {
     uint128 defaultEndPrice = 3_000e6;
     uint128 defaultAmount = 100e18;
 
+    Account signer = makeAccount("signer");
+
     function setUp() public virtual override {
         super.setUp();
-        dutchAuction = new DutchAuction(address(ethStrategy), address(usdcToken));
+        vm.prank(admin1.addr);
+        dutchAuction = new DutchAuction(address(ethStrategy), address(usdcToken), address(0));
         vm.startPrank(address(initialOwner.addr));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(dutchAuction));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
         vm.startPrank(address(ethStrategy));
-        dutchAuction.grantRoles(admin1.addr, dutchAuction.ADMIN_ROLE());
-        dutchAuction.grantRoles(admin2.addr, dutchAuction.ADMIN_ROLE());
+        dutchAuction.grantRoles(admin1.addr, dutchAuction.DA_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin2.addr, dutchAuction.DA_ADMIN_ROLE());
         vm.stopPrank();
     }
 
-    function test_startAuction_success_1() public {
+    function test_startAuction_success_1() public virtual {
         vm.startPrank(admin1.addr);
         DutchAuction.Auction memory auction = DutchAuction.Auction({
             startTime: uint64(block.timestamp),
@@ -143,7 +147,7 @@ contract DutchAuctionTest is BaseTest {
         assertEq(amount, 0, "amount not assigned correctly");
     }
 
-    function test_startAuction_invalidStartPrice_1() public {
+    function test_startAuction_invalidStartPrice_1() public virtual {
         vm.startPrank(admin1.addr);
         vm.expectRevert(DutchAuction.InvalidStartPrice.selector);
         dutchAuction.startAuction(
@@ -236,7 +240,7 @@ contract DutchAuctionTest is BaseTest {
         emit DutchAuction.AuctionEndedEarly();
         vm.expectEmit();
         emit DutchAuction.AuctionFilled(alice, defaultAmount, amountIn);
-        dutchAuction.fill(defaultAmount);
+        dutchAuction.fill(defaultAmount, "");
 
         (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
             dutchAuction.auction();
@@ -262,7 +266,7 @@ contract DutchAuctionTest is BaseTest {
         vm.prank(alice);
         vm.expectEmit();
         emit DutchAuction.AuctionFilled(alice, defaultAmount - 1, amountIn);
-        dutchAuction.fill(defaultAmount - 1);
+        dutchAuction.fill(defaultAmount - 1, "");
 
         (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
             dutchAuction.auction();
@@ -277,7 +281,7 @@ contract DutchAuctionTest is BaseTest {
     function test_fill_auctionNotActive_1() public {
         vm.prank(alice);
         vm.expectRevert(DutchAuction.AuctionNotActive.selector);
-        dutchAuction.fill(defaultAmount);
+        dutchAuction.fill(defaultAmount, "");
 
         (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
             dutchAuction.auction();
@@ -295,7 +299,7 @@ contract DutchAuctionTest is BaseTest {
         vm.warp(block.timestamp + defaultDuration);
         vm.prank(alice);
         vm.expectRevert(DutchAuction.AuctionNotActive.selector);
-        dutchAuction.fill(defaultAmount);
+        dutchAuction.fill(defaultAmount, "");
 
         (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
             dutchAuction.auction();
@@ -334,7 +338,7 @@ contract DutchAuctionTest is BaseTest {
         vm.warp(block.timestamp + 23 hours);
         vm.prank(alice);
         vm.expectRevert(DutchAuction.AuctionNotActive.selector);
-        dutchAuction.fill(defaultAmount);
+        dutchAuction.fill(defaultAmount, "");
 
         (startTime, duration, startPrice, endPrice, amount) = dutchAuction.auction();
         assertEq(startTime, expectedStartTime, "startTime not assigned correctly");
@@ -348,14 +352,14 @@ contract DutchAuctionTest is BaseTest {
         test_startAuction_success_1();
         vm.prank(alice);
         vm.expectRevert(DutchAuction.AmountExceedsSupply.selector);
-        dutchAuction.fill(defaultAmount + 1);
+        dutchAuction.fill(defaultAmount + 1, "");
     }
 
     function test_fill_AmountOutZero() public {
         test_startAuction_success_1();
         vm.prank(alice);
         vm.expectRevert(DutchAuction.AmountOutZero.selector);
-        dutchAuction.fill(0);
+        dutchAuction.fill(0, "");
     }
 
     function test_cancelAuction_success() public {
@@ -424,6 +428,102 @@ contract DutchAuctionTest is BaseTest {
             dutchAuction.decimals()
         );
         assertEq(amountIn, expectedAmountIn, "amountIn not assigned correctly");
+    }
+
+    function test_fill_AlreadyRedeemed() public {
+        vm.prank(admin1.addr);
+        dutchAuction.setSigner(signer.addr);
+        test_startAuction_success_1();
+        uint128 amountIn = calculateAmountIn(
+            defaultAmount / 2,
+            uint64(block.timestamp),
+            defaultDuration,
+            defaultStartPrice,
+            defaultEndPrice,
+            uint64(block.timestamp),
+            dutchAuction.decimals()
+        );
+        mintAndApprove(alice, amountIn, address(dutchAuction), address(usdcToken));
+        bytes memory signature = getSignature(alice);
+        vm.startPrank(alice);
+        dutchAuction.fill(defaultAmount / 2, signature);
+        vm.stopPrank();
+
+        vm.expectRevert(DutchAuction.AlreadyRedeemed.selector);
+        vm.startPrank(alice);
+        dutchAuction.fill(defaultAmount / 2, signature);
+        vm.stopPrank();
+    }
+
+    function test_deposit_InvalidSignature() public {
+        vm.prank(admin1.addr);
+        dutchAuction.setSigner(signer.addr);
+        test_startAuction_success_1();
+        uint128 amountIn = calculateAmountIn(
+            defaultAmount,
+            uint64(block.timestamp),
+            defaultDuration,
+            defaultStartPrice,
+            defaultEndPrice,
+            uint64(block.timestamp),
+            dutchAuction.decimals()
+        );
+        mintAndApprove(alice, amountIn, address(dutchAuction), address(usdcToken));
+        vm.expectRevert(DutchAuction.InvalidSignature.selector);
+        vm.startPrank(alice);
+        dutchAuction.fill(defaultAmount, new bytes(0));
+        vm.stopPrank();
+    }
+
+    function test_setSigner_success() public {
+        vm.startPrank(address(ethStrategy));
+        dutchAuction.setSigner(bob);
+        vm.stopPrank();
+        assertEq(dutchAuction.signer(), bob, "signer incorrect");
+    }
+
+    function test_setSigner_Unauthorized() public {
+        vm.expectRevert(Ownable.Unauthorized.selector);
+        dutchAuction.setSigner(bob);
+        assertEq(dutchAuction.signer(), address(0), "signer incorrect");
+    }
+
+    function test_receive_InvalidCall() public {
+        vm.deal(alice, 1e18);
+        vm.prank(alice);
+        vm.expectRevert(DutchAuction.InvalidCall.selector);
+        payable(address(dutchAuction)).call{value: 1e18}("");
+    }
+
+    function getSignature(address _to) public view returns (bytes memory) {
+        bytes32 hash = SignatureCheckerLib.toEthSignedMessageHash(abi.encodePacked(_to));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer.key, hash);
+        return abi.encodePacked(r, s, v);
+    }
+
+    function test_whitelist_example_signature() public virtual {
+        vm.startPrank(address(ethStrategy));
+        address _signer = 0x4ADaB48B2FfCC7aDdCEF346fE56Af3812813001c;
+        dutchAuction.setSigner(_signer);
+        test_startAuction_success_1();
+        vm.stopPrank();
+        address filler = 0x2Fc9478c3858733b6e9b87458D71044A2071a300;
+        bytes memory signature =
+            hex"85f7247810d04fd78e94915ca7a46e108f55cb0c3c2b9715cfbef293a62c3f9109fcca42b389a4c9ce7348059cd5103a252ab8125c2a648bd6f0ce12718ed1a71c";
+        uint128 amountIn = calculateAmountIn(
+            defaultAmount,
+            uint64(block.timestamp),
+            defaultDuration,
+            defaultStartPrice,
+            defaultEndPrice,
+            uint64(block.timestamp),
+            dutchAuction.decimals()
+        );
+        vm.expectEmit();
+        emit DutchAuction.AuctionFilled(filler, defaultAmount, amountIn);
+        vm.startPrank(filler);
+        dutchAuction.fill(defaultAmount, signature);
+        vm.stopPrank();
     }
 
     function testFuzz_fill(
@@ -577,7 +677,7 @@ contract DutchAuctionTest is BaseTest {
         vm.prank(alice);
         vm.expectEmit();
         emit DutchAuction.AuctionFilled(alice, _amount, amountIn);
-        dutchAuction.fill(_amount);
+        dutchAuction.fill(_amount, "");
 
         (startTime, duration, startPrice, endPrice, amount) = dutchAuction.auction();
         assertEq(amount, _totalAmount - _amount, "amount not assigned correctly");
@@ -586,5 +686,13 @@ contract DutchAuctionTest is BaseTest {
         assertEq(duration, _duration, "duration not assigned correctly");
         assertEq(startPrice, _startPrice, "startPrice not assigned correctly");
         assertEq(endPrice, _endPrice, "endPrice not assigned correctly");
+    }
+}
+
+contract OwnerDepositRejector {
+    error Rejected();
+
+    fallback() external payable {
+        revert Rejected();
     }
 }

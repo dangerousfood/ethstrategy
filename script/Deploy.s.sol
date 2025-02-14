@@ -66,28 +66,29 @@ contract Deploy is Script {
         console2.log("deployer: ", deployer);
 
         EthStrategy ethStrategy = new EthStrategy(
+            uint32(config.governor.timelockDelay),
             config.governor.quorumPercentage,
+            uint48(config.governor.voteExtension),
             uint48(config.governor.votingDelay),
             uint32(config.governor.votingPeriod),
-            config.governor.proposalThreshold,
-            uint48(config.governor.voteExtension),
-            config.governor.timelockDelay
+            config.governor.proposalThreshold
         );
-        AtmAuction atmAuction = new AtmAuction(address(ethStrategy), config.atmAuction.lst);
-        BondAuction bondAuction = new BondAuction(address(ethStrategy), config.bondAuction.usdc);
-        Deposit deposit = new Deposit(
-            address(ethStrategy),
-            config.deposit.signer,
-            config.deposit.conversionRate,
-            config.deposit.conversionPremium,
-            config.deposit.cap,
-            config.deposit.startTime
-        );
+        AtmAuction atmAuction = new AtmAuction(address(ethStrategy), config.atmAuction.lst, address(0));
+        BondAuction bondAuction = new BondAuction(address(ethStrategy), config.bondAuction.usdc, address(0));
+        // Deposit deposit = new Deposit(
+        //     address(ethStrategy),
+        //     config.deposit.signer,
+        //     config.deposit.conversionRate,
+        //     config.deposit.conversionPremium,
+        //     config.deposit.cap,
+        //     config.deposit.startTime
+        // );
+        address deposit = address(0);
 
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(atmAuction));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(bondAuction));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
-        ethStrategy.renounceRole(ethStrategy.DEFAULT_ADMIN_ROLE(), deployer);
+        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(atmAuction));
+        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(bondAuction));
+        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
+        // ethStrategy.renounceRole(ethStrategy.DEFAULT_ADMIN_ROLE(), deployer);
 
         vm.stopBroadcast();
 

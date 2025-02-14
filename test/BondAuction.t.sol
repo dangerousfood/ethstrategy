@@ -8,18 +8,18 @@ import {DutchAuction} from "../src/DutchAuction.sol";
 contract BondAuctionTest is DutchAuctionTest {
     function setUp() public override {
         super.setUp();
-        dutchAuction = new BondAuction(address(ethStrategy), address(usdcToken));
+        vm.prank(admin1.addr);
+        dutchAuction = new BondAuction(address(ethStrategy), address(usdcToken), address(0));
         vm.startPrank(address(initialOwner.addr));
-        ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(dutchAuction));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
         vm.stopPrank();
         vm.startPrank(address(ethStrategy));
-        dutchAuction.grantRoles(admin1.addr, dutchAuction.ADMIN_ROLE());
-        dutchAuction.grantRoles(admin2.addr, dutchAuction.ADMIN_ROLE());
+        dutchAuction.grantRoles(admin2.addr, dutchAuction.DA_ADMIN_ROLE());
         vm.stopPrank();
     }
 
     function test_constructor_success() public {
-        dutchAuction = new BondAuction(address(ethStrategy), address(usdcToken));
+        dutchAuction = new BondAuction(address(ethStrategy), address(usdcToken), address(0));
         assertEq(dutchAuction.ethStrategy(), address(ethStrategy), "ethStrategy not assigned correctly");
         assertEq(dutchAuction.paymentToken(), address(usdcToken), "paymentToken not assigned correctly");
         assertEq(dutchAuction.owner(), address(ethStrategy), "ethStrategy not assigned correctly");
@@ -40,7 +40,7 @@ contract BondAuctionTest is DutchAuctionTest {
 
         assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
         assertEq(usdcToken.balanceOf(address(dutchAuction)), amountIn, "usdcToken balance not assigned correctly");
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         (uint256 amountOut, uint256 _amountIn, uint256 startRedemption) = bondAuction.bonds(alice);
         assertEq(amountOut, defaultAmount, "amount not assigned correctly");
         assertEq(_amountIn, amountIn, "amount not assigned correctly");
@@ -67,7 +67,7 @@ contract BondAuctionTest is DutchAuctionTest {
         );
         assertEq(usdcToken.balanceOf(alice), 0, "usdcToken balance not assigned correctly");
         assertEq(usdcToken.balanceOf(address(dutchAuction)), amountIn, "usdcToken balance not assigned correctly");
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         (uint256 amountOut, uint256 _amountIn, uint256 startRedemption) = bondAuction.bonds(alice);
         assertEq(amountOut, _amount, "amount not assigned correctly");
         assertEq(amountIn, _amountIn, "price not assigned correctly");
@@ -76,7 +76,7 @@ contract BondAuctionTest is DutchAuctionTest {
 
     function test_redeem_success() public {
         test_fill_success_1();
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         vm.warp(block.timestamp + defaultDuration + 1);
         vm.prank(alice);
         bondAuction.redeem();
@@ -97,7 +97,7 @@ contract BondAuctionTest is DutchAuctionTest {
 
     function test_redeem_noBondToRedeem() public {
         test_fill_success_1();
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         vm.warp(block.timestamp + defaultDuration + 1);
         vm.expectRevert(BondAuction.NoBondToRedeem.selector);
         bondAuction.redeem();
@@ -105,7 +105,7 @@ contract BondAuctionTest is DutchAuctionTest {
 
     function test_redeem_redemptionWindowNotStarted() public {
         test_fill_success_1();
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         vm.warp(block.timestamp + defaultDuration - 1);
         vm.prank(alice);
         vm.expectRevert(BondAuction.RedemptionWindowNotStarted.selector);
@@ -128,7 +128,7 @@ contract BondAuctionTest is DutchAuctionTest {
     function test_redeem_redemptionWindowPassed() public {
         uint256 startTime = block.timestamp;
         test_fill_success_1();
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         vm.warp(startTime + defaultDuration + bondAuction.REDEMPTION_WINDOW() + 1);
         vm.prank(alice);
         vm.expectRevert(BondAuction.RedemptionWindowPassed.selector);
@@ -150,7 +150,7 @@ contract BondAuctionTest is DutchAuctionTest {
 
     function test_withdraw_success() public {
         test_fill_success_1();
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         vm.warp(block.timestamp + defaultDuration + 1);
         vm.prank(alice);
         bondAuction.withdraw();
@@ -170,7 +170,7 @@ contract BondAuctionTest is DutchAuctionTest {
 
     function test_withdraw_noBondToWithdraw() public {
         test_fill_success_1();
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         vm.warp(block.timestamp + defaultDuration + 1);
         vm.expectRevert(BondAuction.NoBondToWithdraw.selector);
         bondAuction.withdraw();
@@ -191,7 +191,7 @@ contract BondAuctionTest is DutchAuctionTest {
 
     function test_withdraw_redemptionWindowNotStarted() public {
         test_fill_success_1();
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
         vm.expectRevert(BondAuction.RedemptionWindowNotStarted.selector);
         vm.prank(alice);
         bondAuction.withdraw();
@@ -228,7 +228,7 @@ contract BondAuctionTest is DutchAuctionTest {
         vm.prank(alice);
         vm.expectEmit();
         emit DutchAuction.AuctionFilled(alice, _amount, amountIn);
-        dutchAuction.fill(_amount);
+        dutchAuction.fill(_amount, "");
 
         {
             (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
@@ -246,7 +246,7 @@ contract BondAuctionTest is DutchAuctionTest {
             _amount * defaultStartPrice / (10 ** ethStrategy.decimals()),
             "usdcToken balance not assigned correctly"
         );
-        BondAuction bondAuction = BondAuction(address(dutchAuction));
+        BondAuction bondAuction = BondAuction(payable(dutchAuction));
 
         {
             (uint256 amount, uint256 price, uint256 startRedemption) = bondAuction.bonds(alice);
@@ -258,7 +258,13 @@ contract BondAuctionTest is DutchAuctionTest {
         mintAndApprove(alice, _amount * defaultStartPrice, address(dutchAuction), address(usdcToken));
         vm.prank(alice);
         vm.expectRevert(BondAuction.UnredeemedBond.selector);
-        dutchAuction.fill(_amount);
+        dutchAuction.fill(_amount, "");
+    }
+
+    function test_whitelist_example_signature() public virtual override {
+        address filler = 0x2Fc9478c3858733b6e9b87458D71044A2071a300;
+        mintAndApprove(filler, defaultAmount, address(dutchAuction), address(dutchAuction.paymentToken()));
+        super.test_whitelist_example_signature();
     }
 
     function fill(

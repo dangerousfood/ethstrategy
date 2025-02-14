@@ -5,6 +5,8 @@ import {Test} from "forge-std/Test.sol";
 import {AtmAuction} from "../../src/AtmAuction.sol";
 import {EthStrategy} from "../../src/EthStrategy.sol";
 import {USDCToken} from "./USDCToken.sol";
+import {AccessManager} from "openzeppelin-contracts/contracts/access/manager/AccessManager.sol";
+import {console} from "forge-std/console.sol";
 
 interface IERC20 {
     function mint(address to, uint256 amount) external;
@@ -13,6 +15,7 @@ interface IERC20 {
 
 contract BaseTest is Test {
     EthStrategy ethStrategy;
+    AccessManager accessManager;
     USDCToken usdcToken;
     Account initialOwner;
     Account admin1;
@@ -21,6 +24,13 @@ contract BaseTest is Test {
     address alice;
     address bob;
     address charlie;
+
+    uint32 defaultTimelockDelay = 1 days;
+    uint256 defaultQuorumPercentage = 4;
+    uint48 defaultVoteExtension = 1 days;
+    uint48 defaultVotingDelay = 1 days;
+    uint32 defaultVotingPeriod = 5 days;
+    uint256 defaultProposalThreshold = 30_000e18;
 
     function setUp() public virtual {
         initialOwner = makeAccount("initialOwner");
@@ -35,8 +45,16 @@ contract BaseTest is Test {
 
         usdcToken = new USDCToken();
 
+        accessManager = new AccessManager(initialOwner.addr);
         vm.prank(initialOwner.addr);
-        ethStrategy = new EthStrategy(4, 1 days, 1 weeks, 0, 1 days, 1 days);
+        ethStrategy = new EthStrategy(
+            defaultTimelockDelay,
+            defaultQuorumPercentage,
+            defaultVoteExtension,
+            defaultVotingDelay,
+            defaultVotingPeriod,
+            defaultProposalThreshold
+        );
 
         alice = address(1);
         vm.label(alice, "alice");
