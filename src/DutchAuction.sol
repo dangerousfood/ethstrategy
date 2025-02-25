@@ -15,6 +15,10 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     error InvalidDuration();
     error AmountStartPriceOverflow();
     error AmountOutZero();
+    error AmountBelowMinimum();
+    error SlippageExceeded();
+    error PriceCalculationOverflow();
+    error MultiplicationOverflow();
     /// @dev The struct for the auction parameters
 
     struct Auction {
@@ -37,6 +41,8 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     uint64 public constant MAX_START_TIME_WINDOW = 7 days;
     /// @dev The maximum duration for an auction to occur
     uint64 public constant MAX_DURATION = 30 days;
+    /// @dev The minimum amount of tokens that can be filled
+    uint128 public constant MIN_FILL_AMOUNT = 1e15; // 0.001 tokens with 18 decimals
 
     event AuctionStarted(Auction auction);
     event AuctionFilled(address buyer, uint128 amountOut, uint128 amountIn);
@@ -107,29 +113,52 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
 
     /// @notice Fill the auction with the amount of tokens to be sold
     /// @param _amountOut The amount of tokens to be sold
+    /// @param _maxPrice The maximum price the buyer is willing to pay (slippage protection)
+    function fill(uint128 _amountOut, uint128 _maxPrice) external nonreentrant {
+        Auction memory _auction = auction;
+        uint256 currentTime = block.timestamp;
+        
+        // Validate conditions
+        _validateAuctionActive(_auction, currentTime);
+        _validateFillAmount(_amountOut);
+        _validateAmountNotExceedingSupply(_amountOut, _auction);
+        
+        // Calculate price
+        uint128 currentPrice = _calculateCurrentPrice(_auction, currentTime);
+        _validateSlippage(currentPrice, _maxPrice);
+        
+        // Calculate amount in
+        uint128 amountIn = _calculateAmountIn(_amountOut, currentPrice);
+        
+        // Update state
+        _updateAuctionState(_amountOut, _auction);
+        
+        // Execute fill
+        _executeFill(_amountOut, amountIn, _auction.startTime, _auction.duration);
+    }
+
+    /// @notice Fill the auction with the amount of tokens to be sold (backward compatibility)
+    /// @param _amountOut The amount of tokens to be sold
     function fill(uint128 _amountOut) external nonreentrant {
         Auction memory _auction = auction;
         uint256 currentTime = block.timestamp;
-        if (!_isAuctionActive(_auction, currentTime)) {
-            revert AuctionNotActive();
-        }
-        if (_amountOut == 0) {
-            revert AmountOutZero();
-        }
-        if (_amountOut > _auction.amount) {
-            revert AmountExceedsSupply();
-        }
-        uint128 currentPrice = _getCurrentPrice(_auction, currentTime);
-        uint128 delta_amount = _auction.amount - _amountOut;
-        if (delta_amount > 0) {
-            auction.amount = delta_amount;
-        } else {
-            delete auction;
-            emit AuctionEndedEarly();
-        }
-        uint128 amountIn = _getAmountIn(_amountOut, currentPrice);
-        emit AuctionFilled(msg.sender, _amountOut, amountIn);
-        _fill(_amountOut, amountIn, _auction.startTime, _auction.duration);
+        
+        // Validate conditions
+        _validateAuctionActive(_auction, currentTime);
+        _validateFillAmount(_amountOut);
+        _validateAmountNotExceedingSupply(_amountOut, _auction);
+        
+        // Calculate price
+        uint128 currentPrice = _calculateCurrentPrice(_auction, currentTime);
+        
+        // Calculate amount in
+        uint128 amountIn = _calculateAmountIn(_amountOut, currentPrice);
+        
+        // Update state
+        _updateAuctionState(_amountOut, _auction);
+        
+        // Execute fill
+        _executeFill(_amountOut, amountIn, _auction.startTime, _auction.duration);
     }
 
     /// @dev An internal function to be called when the auction is filled, implementation left empty for inheriting contracts
@@ -138,11 +167,71 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     /// @param startTime The start time of the auction
     /// @param duration The duration of the auction
     function _fill(uint128 amountOut, uint128 amountIn, uint64 startTime, uint64 duration) internal virtual {}
+    /// @dev Validates if the auction is active
+    /// @param _auction The auction to check
+    /// @param currentTime The current time
+    function _validateAuctionActive(Auction memory _auction, uint256 currentTime) internal pure {
+        if (!_isAuctionActive(_auction, currentTime)) {
+            revert AuctionNotActive();
+        }
+    }
+
+    /// @dev Validates if the fill amount is valid
+    /// @param _amountOut The amount of tokens to be sold
+    function _validateFillAmount(uint128 _amountOut) internal pure {
+        if (_amountOut == 0) {
+            revert AmountOutZero();
+        }
+        if (_amountOut < MIN_FILL_AMOUNT) {
+            revert AmountBelowMinimum();
+        }
+    }
+
+    /// @dev Validates if the amount does not exceed supply
+    /// @param _amountOut The amount of tokens to be sold
+    /// @param _auction The auction to check
+    function _validateAmountNotExceedingSupply(uint128 _amountOut, Auction memory _auction) internal pure {
+        if (_amountOut > _auction.amount) {
+            revert AmountExceedsSupply();
+        }
+    }
+
+    /// @dev Validates if the current price does not exceed the max price (slippage protection)
+    /// @param currentPrice The current price of the auction
+    /// @param maxPrice The maximum price the buyer is willing to pay
+    function _validateSlippage(uint128 currentPrice, uint128 maxPrice) internal pure {
+        if (currentPrice > maxPrice) {
+            revert SlippageExceeded();
+        }
+    }
+
+    /// @dev Updates the auction state based on the amount filled
+    /// @param _amountOut The amount of tokens to be sold
+    /// @param _auction The auction to update
+    function _updateAuctionState(uint128 _amountOut, Auction memory _auction) internal {
+        uint128 delta_amount = _auction.amount - _amountOut;
+        if (delta_amount > 0) {
+            auction.amount = delta_amount;
+        } else {
+            delete auction;
+            emit AuctionEndedEarly();
+        }
+    }
+
+    /// @dev Executes the fill operation
+    /// @param _amountOut The amount of tokens to be sold
+    /// @param amountIn The amount of tokens to be paid
+    /// @param startTime The start time of the auction
+    /// @param duration The duration of the auction
+    function _executeFill(uint128 _amountOut, uint128 amountIn, uint64 startTime, uint64 duration) internal {
+        emit AuctionFilled(msg.sender, _amountOut, amountIn);
+        _fill(_amountOut, amountIn, startTime, duration);
+    }
+
     /// @dev A helper function to check if the auction is active
     /// @param _auction The auction to check
     /// @param currentTime The current time
     /// @return bool true if the auction is active, false otherwise
-
     function _isAuctionActive(Auction memory _auction, uint256 currentTime) internal pure returns (bool) {
         return _auction.startTime > 0 && _auction.startTime + _auction.duration > currentTime
             && currentTime >= _auction.startTime;
@@ -162,23 +251,73 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     /// @param currentPrice The current price of the auction
     /// @return amountIn The amount of tokens to be paid by the filler
 
-    function _getAmountIn(uint128 amountOut, uint128 currentPrice) internal view returns (uint128 amountIn) {
-        amountIn = uint128((amountOut * currentPrice) / 10 ** decimals);
+    /// @dev Calculates the amount of tokens to be paid by the filler with overflow checks
+    /// @param amountOut The amount of tokens to be sold
+    /// @param currentPrice The current price of the auction
+    /// @return amountIn The amount of tokens to be paid by the filler
+    function _calculateAmountIn(uint128 amountOut, uint128 currentPrice) internal view returns (uint128 amountIn) {
+        // Check for multiplication overflow
+        uint256 result = uint256(amountOut) * uint256(currentPrice);
+        if (result / amountOut != currentPrice) {
+            revert MultiplicationOverflow();
+        }
+        
+        amountIn = uint128(result / (10 ** decimals));
         return (amountIn == 0) ? 1 : amountIn;
+    }
+
+    // Keep the original function for backward compatibility
+    function _getAmountIn(uint128 amountOut, uint128 currentPrice) internal view returns (uint128) {
+        return _calculateAmountIn(amountOut, currentPrice);
     }
     /// @dev An internal helper function to get the current price of the auction in decimals as a ratio of EthStrategy tokens to paymentToken
     /// @param _auction The auction to get the current price from
     /// @param currentTime The time the filler is calling the function
     /// @return currentPrice The current price of the auction in decimals as a ratio of EthStrategy tokens to paymentToken
 
-    function _getCurrentPrice(Auction memory _auction, uint256 currentTime)
+    /// @dev Calculates the current price with improved precision
+    /// @param _auction The auction to get the current price from
+    /// @param currentTime The time the filler is calling the function
+    /// @return currentPrice The current price of the auction
+    function _calculateCurrentPrice(Auction memory _auction, uint256 currentTime)
         internal
         pure
         returns (uint128 currentPrice)
     {
-        uint256 delta_p = _auction.startPrice - _auction.endPrice;
-        uint256 delta_t = _auction.duration - (currentTime - _auction.startTime);
-        currentPrice = uint128(((delta_p * delta_t) / _auction.duration) + _auction.endPrice);
+        // Validate time is within auction period
+        if (currentTime < _auction.startTime) {
+            revert AuctionNotActive();
+        }
+        
+        uint256 timeElapsed = currentTime - _auction.startTime;
+        if (timeElapsed >= _auction.duration) {
+            revert AuctionNotActive();
+        }
+        
+        uint256 timeRemaining = _auction.duration - timeElapsed;
+        
+        // Calculate price with higher precision
+        // (startPrice * timeRemaining + endPrice * timeElapsed) / duration
+        uint256 numerator = uint256(_auction.startPrice) * timeRemaining + 
+                           uint256(_auction.endPrice) * timeElapsed;
+        
+        uint256 price = numerator / _auction.duration;
+        
+        // Ensure the result fits in uint128
+        if (price > type(uint128).max) {
+            revert PriceCalculationOverflow();
+        }
+        
+        return uint128(price);
+    }
+
+    // Keep the original function for backward compatibility
+    function _getCurrentPrice(Auction memory _auction, uint256 currentTime)
+        internal
+        pure
+        returns (uint128)
+    {
+        return _calculateCurrentPrice(_auction, currentTime);
     }
     /// @notice An external helper function to get the current price of the auction in decimals as a ratio of EthStrategy tokens to paymentToken
     /// @param currentTime The time the filler is calling the function
@@ -186,10 +325,8 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
 
     function getCurrentPrice(uint256 currentTime) external view returns (uint128 currentPrice) {
         Auction memory _auction = auction;
-        if (!_isAuctionActive(_auction, currentTime)) {
-            revert AuctionNotActive();
-        }
-        currentPrice = _getCurrentPrice(_auction, currentTime);
+        _validateAuctionActive(_auction, currentTime);
+        currentPrice = _calculateCurrentPrice(_auction, currentTime);
     }
     /// @dev An external helper function to check if the auction is active
     /// @param currentTime The time the filler is calling the function

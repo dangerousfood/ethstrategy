@@ -84,11 +84,11 @@ contract Deposit is Ownable, TReentrancyGuard {
         uint256 amount = msg.value * CONVERSION_RATE;
         amount = amount * (DENOMINATOR_BP - conversionPremium) / DENOMINATOR_BP;
 
+        IEthStrategy(ethStrategy).mint(msg.sender, amount);
+
         address payable recipient = payable(owner());
         (bool success,) = recipient.call{value: msg.value}("");
         if (!success) revert DepositFailed();
-
-        IEthStrategy(ethStrategy).mint(msg.sender, amount);
     }
     /// @notice get the current deposit cap
     /// @return the current deposit cap
