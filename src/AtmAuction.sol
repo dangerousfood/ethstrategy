@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {DutchAuction} from "./DutchAuction.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
-import {IEthStrategy} from "./EthStrategy.sol";
+import {IEthStrategy} from "./interfaces/IEthStrategy.sol";
 
 contract AtmAuction is DutchAuction {
     error AmountInValueTooLow();

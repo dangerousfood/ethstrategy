@@ -8,6 +8,7 @@ import {BondAuction} from "../src/BondAuction.sol";
 import {EthStrategy} from "../src/EthStrategy.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {Deposit} from "../src/Deposit.sol";
+import {NavOptions} from "../src/NavOptions.sol";
 import {console} from "forge-std/console.sol";
 
 contract Deploy is Script {
@@ -36,9 +37,9 @@ contract Deploy is Script {
     }
 
     struct DepositConfig {
-        uint256 cap;
-        uint256 conversionPremium;
+        uint128 cap;
         uint256 conversionRate;
+        uint64 duration;
         address signer;
         uint64 startTime;
     }
@@ -58,8 +59,9 @@ contract Deploy is Script {
         console2.log("usdc: ", config.bondAuction.usdc);
         console2.log("depositCap: ", config.deposit.cap);
         console2.log("depositConversionRate: ", config.deposit.conversionRate);
-        console2.log("depositConversionPremium: ", config.deposit.conversionPremium);
+        console2.log("depositDuration: ", config.deposit.duration);
         console2.log("depositSigner: ", config.deposit.signer);
+        console2.log("depositStartTime: ", config.deposit.startTime);
 
         vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
         address deployer = vm.addr(vm.envUint("PRIVATE_KEY"));
@@ -75,20 +77,22 @@ contract Deploy is Script {
         );
         AtmAuction atmAuction = new AtmAuction(address(ethStrategy), config.atmAuction.lst, address(0));
         BondAuction bondAuction = new BondAuction(address(ethStrategy), config.bondAuction.usdc, address(0));
-        // Deposit deposit = new Deposit(
-        //     address(ethStrategy),
-        //     config.deposit.signer,
-        //     config.deposit.conversionRate,
-        //     config.deposit.conversionPremium,
-        //     config.deposit.cap,
-        //     config.deposit.startTime
-        // );
-        address deposit = address(0);
-
-        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(atmAuction));
-        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(bondAuction));
-        // ethStrategy.grantRole(ethStrategy.MINTER_ROLE(), address(deposit));
-        // ethStrategy.renounceRole(ethStrategy.DEFAULT_ADMIN_ROLE(), deployer);
+        Deposit deposit = new Deposit(address(ethStrategy), address(0), config.deposit.signer, config.deposit.cap);
+        deposit.startAuction(
+            config.deposit.startTime,
+            config.deposit.duration,
+            config.deposit.conversionRate,
+            config.deposit.conversionRate,
+            config.deposit.cap
+        );
+        NavOptions navOptions = new NavOptions(address(ethStrategy));
+        ethStrategy.grantRoles(address(atmAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(bondAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(navOptions), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(deposit), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(deposit), ethStrategy.GOV_INIT_ADMIN_ROLE());
+        ethStrategy.transferOwnership(address(ethStrategy));
+        deposit.renounceRoles(deposit.DA_ADMIN_ROLE());
 
         vm.stopBroadcast();
 
@@ -97,13 +101,14 @@ contract Deploy is Script {
         vm.serializeAddress(deployments, "EthStrategy", address(ethStrategy));
         vm.serializeAddress(deployments, "AtmAuction", address(atmAuction));
         vm.serializeAddress(deployments, "BondAuction", address(bondAuction));
+        vm.serializeAddress(deployments, "NavOptions", address(navOptions));
         string memory deploymentsJson = vm.serializeAddress(deployments, "Deposit", address(deposit));
 
         string memory deployedConfig = "config";
         vm.serializeAddress(deployedConfig, "deployer", deployer);
         vm.serializeUint(deployedConfig, "DepositCap", config.deposit.cap);
         vm.serializeUint(deployedConfig, "DepositConversionRate", config.deposit.conversionRate);
-        vm.serializeUint(deployedConfig, "DepositConversionPremium", config.deposit.conversionPremium);
+        vm.serializeUint(deployedConfig, "DepositDuration", config.deposit.duration);
         vm.serializeAddress(deployedConfig, "DepositSigner", config.deposit.signer);
         vm.serializeUint(deployedConfig, "startBlock", block.number);
         vm.serializeAddress(deployedConfig, "lst", config.atmAuction.lst);

@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { promises as fs } from 'node:fs';
+import { zeroAddress } from 'viem';
 
 const THREE_SECONDS = 3000;
 
@@ -17,10 +18,10 @@ const getContractAddresses = async () => {
   const addresses = JSON.parse(data);
   console.log(addresses);
 
-  const keys = Object.keys(addresses)
-  await keys.map(async (key:string) => {
+  const keys = Object.keys(addresses);
+  for (const key of keys) {
     await verifyContractWithTimeout(key, addresses[key]);
-  })
+  }
 }
 
 const getContractAddressesMap = async () => {
@@ -28,10 +29,13 @@ const getContractAddressesMap = async () => {
   return JSON.parse(data);
 }
 
-const verifyContractWithTimeout = (contractName:string, address:string) => {
-  setTimeout( async() => {
-    await verifyContract(contractName, address);
-  }, THREE_SECONDS);
+const verifyContractWithTimeout = async (contractName, address) => {
+  await new Promise((resolve) => {
+    setTimeout(async () => {
+      await verifyContract(contractName, address);
+      resolve(true);
+    }, THREE_SECONDS);
+  });
 };
 
 const getConfig = async () => {
@@ -53,23 +57,23 @@ const verifyContract = async(
   let command = `forge verify-contract ${address} ${contractName} --compiler-version ${compilerVersion} --watch --verifier etherscan --etherscan-api-key ${process.env.ETHERSCAN_API_KEY} --chain-id ${process.env.CHAIN_ID} --rpc-url ${process.env.RPC_URL}`;
 
   if (contractName === 'AtmAuction') {
-    command += ` --constructor-args $(cast abi-encode "constructor(address,address,address)" ${addressesMap.EthStrategy} ${addressesMap.EthStrategyGovernor} ${config.lst} )`;
+    command += ` --constructor-args $(cast abi-encode "constructor(address,address,address)" ${addressesMap.EthStrategy} ${config.lst} ${zeroAddress})`;
   }
 
   if (contractName === 'BondAuction') {
-    command += ` --constructor-args $(cast abi-encode "constructor(address,address,address)" ${addressesMap.EthStrategy} ${addressesMap.EthStrategyGovernor} ${config.usdc} )`;
+    command += ` --constructor-args $(cast abi-encode "constructor(address,address,address)" ${addressesMap.EthStrategy} ${config.usdc} ${zeroAddress})`;
   }
 
   if (contractName === 'EthStrategy') {
-    command += ` --constructor-args $(cast abi-encode "constructor(address)" ${config.deployer} )`;
-  }
-
-  if (contractName === 'EthStrategyGovernor') {
-    command += ` --constructor-args $(cast abi-encode "constructor(address,uint256,uint256,uint256,uint256)" ${addressesMap.EthStrategy} ${config.quorumPercentage} ${config.votingDelay} ${config.votingPeriod} ${config.proposalThreshold} )`;
+    command += ` --constructor-args $(cast abi-encode "constructor(uint32,uint256,uint48,uint48,uint32,uint256)" ${config.timelockDelay} ${config.quorumPercentage} ${config.voteExtension} ${config.votingDelay} ${config.votingPeriod} ${config.proposalThreshold} )`;
   }
 
   if (contractName === 'Deposit') {
-    command += ` --constructor-args $(cast abi-encode "constructor(address,address,address,uint256,uint256,uint256,uint64)" ${config.deployer} ${addressesMap.EthStrategy} ${config.DepositSigner} ${config.DepositConversionRate} ${config.DepositConversionPremium} ${BigInt(config.DepositCap).toString()} ${config.startTime} )`;
+    command += ` --constructor-args $(cast abi-encode "constructor(address,address,address,uint256)" ${addressesMap.EthStrategy} ${zeroAddress} ${config.DepositSigner} ${BigInt(config.DepositCap).toString()} )`;
+  }
+
+  if (contractName === 'NavOptions') {
+    command += ` --constructor-args $(cast abi-encode "constructor(address)" ${addressesMap.EthStrategy} )`;
   }
 
   exec(command, (err, stdout) => {

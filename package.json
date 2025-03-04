@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "deploy:test": "dotenv -e .env -- bash -c 'forge script script/Deploy.s.sol --chain-id \"$CHAIN_ID\" --rpc-url \"$RPC_URL\" --private-key \"$PRIVATE_KEY\"'",
-    "deploy:prod": "dotenv -e .env -- bash -c 'forge script script/Deploy.s.sol --chain-id \"$CHAIN_ID\" --rpc-url \"$RPC_URL\" --private-key \"$PRIVATE_KEY\" --broadcast'",
+    "deploy:prod": "dotenv -e .env -- bash -c 'forge script script/Deploy.s.sol --chain-id \"$CHAIN_ID\" --rpc-url \"$RPC_URL\" --private-key \"$PRIVATE_KEY\" --broadcast --slow'",
     "verify": "dotenv -e .env -- bash -c 'tsx ts-scripts/verify-contracts.ts -P ./'",
     "sign-whitelist": "dotenv -e .env -- bash -c 'tsx ts-scripts/sign-whitelist.ts -P ./'",
     "report": "forge coverage --no-match-test testFuzz --report lcov && genhtml -o report --branch-coverage lcov.info"

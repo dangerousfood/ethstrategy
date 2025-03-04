@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {OwnableRoles} from "solady/src/auth/OwnableRoles.sol";
 import {ERC20} from "solady/src/tokens/ERC20.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
-import {IEthStrategy} from "./EthStrategy.sol";
+import {IEthStrategy} from "./interfaces/IEthStrategy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract NavOptions is OwnableRoles, ERC20 {

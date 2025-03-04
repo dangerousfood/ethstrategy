@@ -18,12 +18,6 @@ import {TReentrancyGuard} from "lib/TReentrancyGuard/src/TReentrancyGuard.sol";
 import {GovernorSettings} from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
 import {OwnableRoles} from "solady/src/auth/OwnableRoles.sol";
 
-interface IEthStrategy {
-    function decimals() external view returns (uint8);
-    function mint(address _to, uint256 _amount) external;
-    function initiateGovernance() external;
-}
-
 contract EthStrategy is
     ERC20Votes,
     VotesExtended,

@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {OwnableRoles} from "solady/src/auth/OwnableRoles.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 import {TReentrancyGuard} from "../lib/TReentrancyGuard/src/TReentrancyGuard.sol";
-import {IEthStrategy} from "./EthStrategy.sol";
+import {IEthStrategy} from "./interfaces/IEthStrategy.sol";
 import {SignatureCheckerLib} from "solady/src/utils/SignatureCheckerLib.sol";
 
 contract DutchAuction is OwnableRoles, TReentrancyGuard {

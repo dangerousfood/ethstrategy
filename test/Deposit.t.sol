@@ -24,7 +24,7 @@ contract DepositTest is DutchAuctionTest {
     function setUp() public override {
         super.setUp();
         vm.prank(admin1.addr);
-        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0));
+        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0), defaultAmount);
         vm.startPrank(address(initialOwner.addr));
         ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
         vm.startPrank(address(ethStrategy));
@@ -36,7 +36,7 @@ contract DepositTest is DutchAuctionTest {
     }
 
     function test_constructor_success() public {
-        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0));
+        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0), defaultAmount);
         assertEq(dutchAuction.ethStrategy(), address(ethStrategy), "ethStrategy not assigned correctly");
         assertEq(dutchAuction.paymentToken(), address(usdcToken), "paymentToken not assigned correctly");
         assertEq(dutchAuction.owner(), address(ethStrategy), "ethStrategy not assigned correctly");
@@ -122,7 +122,7 @@ contract DepositTest is DutchAuctionTest {
             defaultVotingPeriod,
             defaultProposalThreshold
         );
-        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0));
+        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0), defaultAmount);
         ethStrategy.transferOwnership(address(ethStrategy));
         vm.stopPrank();
         vm.startPrank(address(ethStrategy));
@@ -145,7 +145,7 @@ contract DepositTest is DutchAuctionTest {
             defaultVotingPeriod,
             defaultProposalThreshold
         );
-        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0));
+        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0), defaultAmount);
         ethStrategy.transferOwnership(address(ethStrategy));
         vm.stopPrank();
         vm.startPrank(address(ethStrategy));
