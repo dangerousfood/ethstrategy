@@ -98,16 +98,23 @@ contract NavOptions is OwnableRoles, ERC20 {
         uint256 len = navTokens.length;
         for (; i < len;) {
             address navToken = navTokens[i];
-            uint256 _balance = IERC20(navToken).balanceOf(_owner);
-            if (_balance != 0) {
-                uint256 proportion = (_balance * _amount) / totalSupply;
-                if (_balance > 0 && proportion == 0) {
-                    proportion = 1;
-                }
-                navValues[newLen] = NavValue({token: navToken, value: proportion});
-                unchecked {
-                    ++newLen;
-                }
+            bytes32 codeHash;
+            assembly ("memory-safe") {
+                codeHash := extcodehash(navToken)
+            }
+            if (codeHash != bytes32(0)) {
+                try IERC20(navToken).balanceOf(_owner) returns (uint256 _balance) {
+                    if (_balance != 0) {
+                        uint256 proportion = (_balance * _amount) / totalSupply;
+                        if (proportion == 0) {
+                            proportion = 1;
+                        }
+                        navValues[newLen] = NavValue({token: navToken, value: proportion});
+                        unchecked {
+                            ++newLen;
+                        }
+                    }
+                } catch {}
             }
             unchecked {
                 ++i;
@@ -116,7 +123,7 @@ contract NavOptions is OwnableRoles, ERC20 {
         uint256 balance = _owner.balance;
         if (balance > 0) {
             uint256 proportion = (balance * _amount) / totalSupply;
-            if (balance > 0 && proportion == 0) {
+            if (proportion == 0) {
                 proportion = 1;
             }
             navValues[newLen] = NavValue({token: address(0), value: proportion});

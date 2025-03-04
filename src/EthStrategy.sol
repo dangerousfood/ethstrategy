@@ -57,10 +57,11 @@ contract EthStrategy is
     /// @dev The event for when the execution delay is set
 
     event ExecutionDelaySet(uint256 oldExecutionDelay, uint256 newExecutionDelay);
-    /// @dev The event for when governance is not initiated
-    event GovernanceNotInitiated();
-    /// @dev The event for when governance is already initiated
-    event GovernanceAlreadyInitiated();
+    /// @dev The error for when governance is not initiated
+
+    error GovernanceNotInitiated();
+    /// @dev The error for when governance is already initiated
+    error GovernanceAlreadyInitiated();
 
     uint256 public executionDelay;
 

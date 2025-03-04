@@ -231,7 +231,7 @@ contract BondAuctionTest is DutchAuctionTest {
         dutchAuction.fill(_amount, "");
 
         {
-            (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+            (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
                 dutchAuction.auction();
             assertEq(startTime, expectedStartTime, "startTime not assigned correctly");
             assertEq(duration, defaultDuration, "duration not assigned correctly");

@@ -18,6 +18,7 @@ import {DutchAuctionTest} from "./DutchAuction.t.sol";
 import {AtmAuction} from "../src/AtmAuction.sol";
 import {DutchAuction} from "../src/DutchAuction.sol";
 import {Deposit} from "../src/Deposit.sol";
+import {EthStrategy} from "../src/EthStrategy.sol";
 
 contract DepositTest is DutchAuctionTest {
     function setUp() public override {
@@ -86,6 +87,76 @@ contract DepositTest is DutchAuctionTest {
         // I'm not proud of myself for this one
         defaultEndPrice = defaultEndPrice - 1;
         super.test_startAuction_invalidStartPrice_1();
+    }
+
+    function test_fill_revert_DepositAmountTooHigh() public virtual {
+        defaultAmount = defaultAmount + 1;
+
+        uint128 amountOut = calculateAmountOut(
+            defaultAmount,
+            uint64(block.timestamp),
+            defaultDuration,
+            defaultStartPrice,
+            defaultEndPrice,
+            uint64(block.timestamp),
+            dutchAuction.decimals()
+        );
+        vm.startPrank(admin1.addr);
+        dutchAuction.startAuction(
+            uint64(block.timestamp), defaultDuration, defaultStartPrice, defaultEndPrice, amountOut
+        );
+        vm.stopPrank();
+        mintAndApprove(alice, defaultAmount, address(dutchAuction), address(dutchAuction.paymentToken()));
+        vm.prank(alice);
+        vm.expectRevert(Deposit.DepositAmountTooHigh.selector);
+        dutchAuction.fill(amountOut, "");
+    }
+
+    function test_initiateGovernance_success() public {
+        vm.startPrank(initialOwner.addr);
+        ethStrategy = new EthStrategy(
+            defaultTimelockDelay,
+            defaultQuorumPercentage,
+            defaultVoteExtension,
+            defaultVotingDelay,
+            defaultVotingPeriod,
+            defaultProposalThreshold
+        );
+        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0));
+        ethStrategy.transferOwnership(address(ethStrategy));
+        vm.stopPrank();
+        vm.startPrank(address(ethStrategy));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.GOV_INIT_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin1.addr, dutchAuction.DA_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin2.addr, dutchAuction.DA_ADMIN_ROLE());
+        vm.stopPrank();
+        Deposit(payable(dutchAuction)).initiateGovernance();
+        assertEq(ethStrategy.governanceInitiated(), true, "governanceInitiated not assigned correctly");
+    }
+
+    function test_initiateGovernance_revert_AuctionNotEnded() public {
+        vm.startPrank(initialOwner.addr);
+        ethStrategy = new EthStrategy(
+            defaultTimelockDelay,
+            defaultQuorumPercentage,
+            defaultVoteExtension,
+            defaultVotingDelay,
+            defaultVotingPeriod,
+            defaultProposalThreshold
+        );
+        dutchAuction = new Deposit(address(ethStrategy), address(usdcToken), address(0));
+        ethStrategy.transferOwnership(address(ethStrategy));
+        vm.stopPrank();
+        vm.startPrank(address(ethStrategy));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.GOV_INIT_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin1.addr, dutchAuction.DA_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin2.addr, dutchAuction.DA_ADMIN_ROLE());
+        vm.stopPrank();
+        test_startAuction_success_1();
+        vm.expectRevert(Deposit.AuctionNotEnded.selector);
+        Deposit(payable(dutchAuction)).initiateGovernance();
     }
 
     function testFuzz_startPrice(uint128 _startPrice) public virtual override {

@@ -19,15 +19,14 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     error AlreadyRedeemed();
     error InvalidSignature();
     error InvalidCall();
-    error AmountInZero();
     /// @dev The struct for the auction parameters
 
     struct Auction {
         uint64 startTime;
         uint64 duration;
-        uint128 startPrice;
-        uint128 endPrice;
         uint128 amount;
+        uint256 startPrice;
+        uint256 endPrice;
     }
     /// @dev The current auction
 
@@ -48,7 +47,7 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     mapping(bytes32 => bool) public hasRedeemed;
 
     event AuctionStarted(Auction auction);
-    event AuctionFilled(address buyer, uint128 amountOut, uint128 amountIn);
+    event AuctionFilled(address buyer, uint128 amountOut, uint256 amountIn);
     event AuctionEndedEarly();
     event AuctionCancelled();
     /// @dev The role for the admin, can start and cancel auctions
@@ -72,7 +71,7 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     /// @param _endPrice The ending price of the auction
     /// @param _amount The amount of tokens to be sold
 
-    function startAuction(uint64 _startTime, uint64 _duration, uint128 _startPrice, uint128 _endPrice, uint128 _amount)
+    function startAuction(uint64 _startTime, uint64 _duration, uint256 _startPrice, uint256 _endPrice, uint128 _amount)
         public
         onlyOwnerOrRoles(DA_ADMIN_ROLE)
     {
@@ -86,7 +85,7 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
         if (_duration == 0 || _duration > MAX_DURATION) {
             revert InvalidDuration();
         }
-        if (_startPrice > (type(uint128).max / _amount)) {
+        if (_startPrice > (type(uint256).max / _amount)) {
             revert AmountStartPriceOverflow();
         }
         Auction memory _auction = auction;
@@ -135,7 +134,7 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
         if (_amountOut > _auction.amount) {
             revert AmountExceedsSupply();
         }
-        uint128 currentPrice = _getCurrentPrice(_auction, currentTime);
+        uint256 currentPrice = _getCurrentPrice(_auction, currentTime);
         uint128 delta_amount = _auction.amount - _amountOut;
         if (delta_amount > 0) {
             auction.amount = delta_amount;
@@ -143,10 +142,7 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
             delete auction;
             emit AuctionEndedEarly();
         }
-        uint128 amountIn = _getAmountIn(_amountOut, currentPrice);
-        if (amountIn == 0) {
-            revert AmountInZero();
-        }
+        uint256 amountIn = _getAmountIn(_amountOut, currentPrice);
         emit AuctionFilled(msg.sender, _amountOut, amountIn);
         _fill(_amountOut, amountIn, _auction.startTime, _auction.duration);
     }
@@ -156,7 +152,7 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     /// @param amountIn The amount of tokens to be bought
     /// @param startTime The start time of the auction
     /// @param duration The duration of the auction
-    function _fill(uint128 amountOut, uint128 amountIn, uint64 startTime, uint64 duration) internal virtual {}
+    function _fill(uint128 amountOut, uint256 amountIn, uint64 startTime, uint64 duration) internal virtual {}
     /// @dev A helper function to check if the auction is active
     /// @param _auction The auction to check
     /// @param currentTime The current time
@@ -171,9 +167,9 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     /// @param currentTime The time the filler is calling the function
     /// @return amountIn The amount of tokens to be paid by the filler
 
-    function getAmountIn(uint128 amountOut, uint64 currentTime) external view returns (uint128 amountIn) {
+    function getAmountIn(uint128 amountOut, uint64 currentTime) external view returns (uint256 amountIn) {
         Auction memory _auction = auction;
-        uint128 currentPrice = _getCurrentPrice(_auction, currentTime);
+        uint256 currentPrice = _getCurrentPrice(_auction, currentTime);
         return _getAmountIn(amountOut, currentPrice);
     }
     /// @dev An internal helper function to get the amount of tokens to be paid by the filler
@@ -181,8 +177,8 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     /// @param currentPrice The current price of the auction
     /// @return amountIn The amount of tokens to be paid by the filler
 
-    function _getAmountIn(uint128 amountOut, uint128 currentPrice) internal view returns (uint128 amountIn) {
-        amountIn = uint128((amountOut * currentPrice) / 10 ** decimals);
+    function _getAmountIn(uint128 amountOut, uint256 currentPrice) internal pure returns (uint256 amountIn) {
+        amountIn = (amountOut * currentPrice) / 10 ** decimals;
         return (amountIn == 0) ? 1 : amountIn;
     }
     /// @dev An internal helper function to get the current price of the auction in decimals as a ratio of EthStrategy tokens to paymentToken
@@ -193,17 +189,17 @@ contract DutchAuction is OwnableRoles, TReentrancyGuard {
     function _getCurrentPrice(Auction memory _auction, uint256 currentTime)
         internal
         pure
-        returns (uint128 currentPrice)
+        returns (uint256 currentPrice)
     {
         uint256 delta_p = _auction.startPrice - _auction.endPrice;
         uint256 delta_t = _auction.duration - (currentTime - _auction.startTime);
-        currentPrice = uint128(((delta_p * delta_t) / _auction.duration) + _auction.endPrice);
+        currentPrice = ((delta_p * delta_t) / _auction.duration) + _auction.endPrice;
     }
     /// @notice An external helper function to get the current price of the auction in decimals as a ratio of EthStrategy tokens to paymentToken
     /// @param currentTime The time the filler is calling the function
     /// @return currentPrice The current price of the auction in decimals as a ratio of EthStrategy tokens to paymentToken
 
-    function getCurrentPrice(uint256 currentTime) external view returns (uint128 currentPrice) {
+    function getCurrentPrice(uint256 currentTime) external view returns (uint256 currentPrice) {
         Auction memory _auction = auction;
         if (!_isAuctionActive(_auction, currentTime)) {
             revert AuctionNotActive();

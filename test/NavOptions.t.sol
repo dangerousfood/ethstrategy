@@ -8,6 +8,7 @@ import {SignatureCheckerLib} from "solady/src/utils/SignatureCheckerLib.sol";
 import {NavOptions} from "../../src/NavOptions.sol";
 import {Ownable} from "solady/src/auth/Ownable.sol";
 import {EthStrategy} from "../../src/EthStrategy.sol";
+import {USDCToken} from "./utils/USDCToken.sol";
 
 contract NavOptionsTest is BaseTest {
     NavOptions navOptions;
@@ -106,6 +107,74 @@ contract NavOptionsTest is BaseTest {
         assertEq(usdcToken.balanceOf(address(ethStrategy)), 100e18, "balance not assigned correctly");
         assertEq(address(ethStrategy).balance, 100e18, "balance not assigned correctly");
         assertEq(alice.balance, 1, "balance not assigned correctly");
+    }
+
+    function test_redeem_success_5() public {
+        USDCToken newToken = new USDCToken();
+        mintOptions(alice, 100e18);
+        addNavToken(address(newToken));
+        addNavToken(address(usdcToken));
+
+        vm.deal(address(ethStrategy), 50e18);
+        vm.deal(alice, 50e18 + 1);
+        mintAndApprove(alice, 100e18, address(navOptions), address(usdcToken));
+        vm.prank(address(navOptions));
+        ethStrategy.mint(bob, 100e18);
+        vm.startPrank(alice);
+        usdcToken.transfer(address(ethStrategy), 50e18);
+        navOptions.redeem{value: 50e18 + 1}(100e18);
+        vm.stopPrank();
+        assertEq(navOptions.balanceOf(alice), 0, "balance not assigned correctly");
+        assertEq(ethStrategy.balanceOf(alice), 100e18, "balance not assigned correctly");
+        assertEq(usdcToken.balanceOf(alice), 0, "balance not assigned correctly");
+        assertEq(usdcToken.balanceOf(address(ethStrategy)), 100e18, "balance not assigned correctly");
+        assertEq(address(ethStrategy).balance, 100e18, "balance not assigned correctly");
+        assertEq(alice.balance, 1, "balance not assigned correctly");
+    }
+
+    function test_redeem_success_6() public {
+        mintOptions(alice, 100e18);
+        addNavToken(address(usdcToken));
+        addNavToken(address(69));
+
+        vm.deal(address(ethStrategy), 50e18);
+        vm.deal(alice, 50e18);
+        mintAndApprove(alice, 100e18, address(navOptions), address(usdcToken));
+        vm.prank(address(navOptions));
+        ethStrategy.mint(bob, 100e18);
+        vm.startPrank(alice);
+        usdcToken.transfer(address(ethStrategy), 50e18);
+        navOptions.redeem{value: 50e18}(100e18);
+        vm.stopPrank();
+        assertEq(navOptions.balanceOf(alice), 0, "balance not assigned correctly");
+        assertEq(ethStrategy.balanceOf(alice), 100e18, "balance not assigned correctly");
+        assertEq(usdcToken.balanceOf(alice), 0, "balance not assigned correctly");
+        assertEq(usdcToken.balanceOf(address(ethStrategy)), 100e18, "balance not assigned correctly");
+        assertEq(address(ethStrategy).balance, 100e18, "balance not assigned correctly");
+        assertEq(alice.balance, 0, "balance not assigned correctly");
+    }
+
+    function test_redeem_success_7() public {
+        EmptyContract emptyContract = new EmptyContract();
+        mintOptions(alice, 100e18);
+        addNavToken(address(usdcToken));
+        addNavToken(address(emptyContract));
+
+        vm.deal(address(ethStrategy), 50e18);
+        vm.deal(alice, 50e18);
+        mintAndApprove(alice, 100e18, address(navOptions), address(usdcToken));
+        vm.prank(address(navOptions));
+        ethStrategy.mint(bob, 100e18);
+        vm.startPrank(alice);
+        usdcToken.transfer(address(ethStrategy), 50e18);
+        navOptions.redeem{value: 50e18}(100e18);
+        vm.stopPrank();
+        assertEq(navOptions.balanceOf(alice), 0, "balance not assigned correctly");
+        assertEq(ethStrategy.balanceOf(alice), 100e18, "balance not assigned correctly");
+        assertEq(usdcToken.balanceOf(alice), 0, "balance not assigned correctly");
+        assertEq(usdcToken.balanceOf(address(ethStrategy)), 100e18, "balance not assigned correctly");
+        assertEq(address(ethStrategy).balance, 100e18, "balance not assigned correctly");
+        assertEq(alice.balance, 0, "balance not assigned correctly");
     }
 
     function test_getNavValue_success_1() public {
@@ -244,3 +313,5 @@ contract NavOptionsTest is BaseTest {
         navOptions.removeNavToken(token);
     }
 }
+
+contract EmptyContract {}

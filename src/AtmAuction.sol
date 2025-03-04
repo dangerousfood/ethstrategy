@@ -18,7 +18,7 @@ contract AtmAuction is DutchAuction {
     /// @param amountOut The amount of EthStrategy tokens to be sold
     /// @param amountIn The amount of payment tokens to be paid by the filler
 
-    function _fill(uint128 amountOut, uint128 amountIn, uint64, uint64) internal virtual override {
+    function _fill(uint128 amountOut, uint256 amountIn, uint64, uint64) internal virtual override {
         address _paymentToken = paymentToken;
         if (_paymentToken == address(0)) {
             if (msg.value < amountIn) {

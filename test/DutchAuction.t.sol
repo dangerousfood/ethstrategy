@@ -5,6 +5,7 @@ import {BaseTest} from "./utils/BaseTest.t.sol";
 import {DutchAuction} from "../../src/DutchAuction.sol";
 import {Ownable} from "solady/src/auth/OwnableRoles.sol";
 import {SignatureCheckerLib} from "solady/src/utils/SignatureCheckerLib.sol";
+import {console} from "forge-std/console.sol";
 
 contract DutchAuctionTest is BaseTest {
     DutchAuction dutchAuction;
@@ -44,7 +45,7 @@ contract DutchAuctionTest is BaseTest {
         );
         vm.stopPrank();
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(block.timestamp), "startTime not assigned correctly");
         assertEq(duration, defaultDuration, "duration not assigned correctly");
@@ -67,7 +68,7 @@ contract DutchAuctionTest is BaseTest {
         dutchAuction.startAuction(uint64(0), defaultDuration, defaultStartPrice, defaultEndPrice, defaultAmount);
         vm.stopPrank();
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(block.timestamp), "startTime not assigned correctly");
         assertEq(duration, defaultDuration, "duration not assigned correctly");
@@ -85,7 +86,7 @@ contract DutchAuctionTest is BaseTest {
             uint64(currentTime - 1), defaultDuration, defaultStartPrice, defaultEndPrice, defaultAmount
         );
         vm.stopPrank();
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -99,7 +100,7 @@ contract DutchAuctionTest is BaseTest {
         vm.expectRevert(DutchAuction.InvalidDuration.selector);
         dutchAuction.startAuction(uint64(block.timestamp), 0, defaultStartPrice, defaultEndPrice, defaultAmount);
         vm.stopPrank();
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -116,7 +117,7 @@ contract DutchAuctionTest is BaseTest {
             uint64(block.timestamp), maxDuration + 1, defaultStartPrice, defaultEndPrice, defaultAmount
         );
         vm.stopPrank();
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -138,7 +139,7 @@ contract DutchAuctionTest is BaseTest {
             defaultAmount
         );
         vm.stopPrank();
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -154,7 +155,7 @@ contract DutchAuctionTest is BaseTest {
             uint64(block.timestamp), defaultDuration, defaultEndPrice, defaultStartPrice, defaultAmount
         );
         vm.stopPrank();
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -168,7 +169,7 @@ contract DutchAuctionTest is BaseTest {
         vm.expectRevert(DutchAuction.InvalidStartPrice.selector);
         dutchAuction.startAuction(uint64(block.timestamp), defaultDuration, defaultStartPrice, 0, defaultAmount);
         vm.stopPrank();
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -183,12 +184,12 @@ contract DutchAuctionTest is BaseTest {
         dutchAuction.startAuction(
             uint64(block.timestamp),
             defaultDuration,
-            (type(uint128).max / defaultAmount) + 1,
+            (type(uint256).max / defaultAmount) + 1,
             defaultEndPrice,
             defaultAmount
         );
         vm.stopPrank();
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -204,7 +205,7 @@ contract DutchAuctionTest is BaseTest {
         dutchAuction.startAuction(
             uint64(currentTime - 1), defaultDuration, defaultStartPrice, defaultEndPrice, defaultAmount
         );
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -242,7 +243,7 @@ contract DutchAuctionTest is BaseTest {
         emit DutchAuction.AuctionFilled(alice, defaultAmount, amountIn);
         dutchAuction.fill(defaultAmount, "");
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -268,7 +269,7 @@ contract DutchAuctionTest is BaseTest {
         emit DutchAuction.AuctionFilled(alice, defaultAmount - 1, amountIn);
         dutchAuction.fill(defaultAmount - 1, "");
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, block.timestamp, "startTime not assigned correctly");
         assertEq(duration, defaultDuration, "duration not assigned correctly");
@@ -283,7 +284,7 @@ contract DutchAuctionTest is BaseTest {
         vm.expectRevert(DutchAuction.AuctionNotActive.selector);
         dutchAuction.fill(defaultAmount, "");
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -301,7 +302,7 @@ contract DutchAuctionTest is BaseTest {
         vm.expectRevert(DutchAuction.AuctionNotActive.selector);
         dutchAuction.fill(defaultAmount, "");
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, expectedStartTime, "startTime not assigned correctly");
         assertEq(duration, defaultDuration, "duration not assigned correctly");
@@ -327,7 +328,7 @@ contract DutchAuctionTest is BaseTest {
         dutchAuction.startAuction(expectedStartTime, defaultDuration, defaultStartPrice, defaultEndPrice, defaultAmount);
         vm.stopPrank();
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, expectedStartTime, "startTime not assigned correctly");
         assertEq(duration, defaultDuration, "duration not assigned correctly");
@@ -340,7 +341,7 @@ contract DutchAuctionTest is BaseTest {
         vm.expectRevert(DutchAuction.AuctionNotActive.selector);
         dutchAuction.fill(defaultAmount, "");
 
-        (startTime, duration, startPrice, endPrice, amount) = dutchAuction.auction();
+        (startTime, duration, amount, startPrice, endPrice) = dutchAuction.auction();
         assertEq(startTime, expectedStartTime, "startTime not assigned correctly");
         assertEq(duration, defaultDuration, "duration not assigned correctly");
         assertEq(startPrice, defaultStartPrice, "startPrice not assigned correctly");
@@ -370,7 +371,7 @@ contract DutchAuctionTest is BaseTest {
         dutchAuction.cancelAuction();
         vm.stopPrank();
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, uint64(0), "startTime not assigned correctly");
         assertEq(duration, 0, "duration not assigned correctly");
@@ -388,7 +389,7 @@ contract DutchAuctionTest is BaseTest {
 
     function test_getCurrentPrice_success() public {
         test_startAuction_success_1();
-        uint128 currentPrice = dutchAuction.getCurrentPrice(block.timestamp);
+        uint256 currentPrice = dutchAuction.getCurrentPrice(block.timestamp);
         assertEq(currentPrice, defaultStartPrice, "currentPrice not assigned correctly");
     }
 
@@ -417,7 +418,7 @@ contract DutchAuctionTest is BaseTest {
 
     function test_getAmountIn_success() public {
         test_startAuction_success_1();
-        uint128 amountIn = dutchAuction.getAmountIn(defaultAmount, uint64(block.timestamp));
+        uint256 amountIn = dutchAuction.getAmountIn(defaultAmount, uint64(block.timestamp));
         uint128 expectedAmountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
@@ -661,7 +662,7 @@ contract DutchAuctionTest is BaseTest {
         dutchAuction.startAuction(_startTime, _duration, _startPrice, _endPrice, _totalAmount);
         vm.stopPrank();
 
-        (uint64 startTime, uint64 duration, uint128 startPrice, uint128 endPrice, uint128 amount) =
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
             dutchAuction.auction();
         assertEq(startTime, _startTime, "startTime not assigned correctly");
         assertEq(duration, _duration, "duration not assigned correctly");
@@ -679,7 +680,7 @@ contract DutchAuctionTest is BaseTest {
         emit DutchAuction.AuctionFilled(alice, _amount, amountIn);
         dutchAuction.fill(_amount, "");
 
-        (startTime, duration, startPrice, endPrice, amount) = dutchAuction.auction();
+        (startTime, duration, amount, startPrice, endPrice) = dutchAuction.auction();
         assertEq(amount, _totalAmount - _amount, "amount not assigned correctly");
 
         assertEq(startTime, _startTime, "startTime not assigned correctly");

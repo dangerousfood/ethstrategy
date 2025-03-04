@@ -9,7 +9,7 @@ contract BondAuction is DutchAuction {
     /// @dev The struct for the bond parameters
     struct Bond {
         uint128 amountOut;
-        uint128 amountIn;
+        uint256 amountIn;
         uint64 startRedemption;
     }
 
@@ -36,7 +36,7 @@ contract BondAuction is DutchAuction {
     /// @param startTime The start time of the auction
     /// @param duration The duration of the auction
 
-    function _fill(uint128 amountOut, uint128 amountIn, uint64 startTime, uint64 duration) internal override {
+    function _fill(uint128 amountOut, uint256 amountIn, uint64 startTime, uint64 duration) internal override {
         if (bonds[msg.sender].startRedemption != 0) {
             revert UnredeemedBond();
         }

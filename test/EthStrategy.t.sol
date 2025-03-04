@@ -570,6 +570,103 @@ contract EthStrategyGovernorTest is BaseTest {
         ethStrategy.execute(targets, values, calldatas, keccak256(bytes(description)));
     }
 
+    function test_proposal_revert_GovernanceNotInitiated() public {
+        vm.startPrank(initialOwner.addr);
+        ethStrategy = new EthStrategy(
+            defaultTimelockDelay,
+            defaultQuorumPercentage,
+            defaultVoteExtension,
+            defaultVotingDelay,
+            defaultVotingPeriod,
+            defaultProposalThreshold
+        );
+        dutchAuction = new DutchAuction(address(ethStrategy), address(usdcToken), address(0));
+        ethStrategy.transferOwnership(address(ethStrategy));
+        vm.stopPrank();
+        vm.startPrank(address(ethStrategy));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(ethStrategy), ethStrategy.GOV_INIT_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin1.addr, dutchAuction.DA_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin2.addr, dutchAuction.DA_ADMIN_ROLE());
+        vm.stopPrank();
+
+        vm.startPrank(address(dutchAuction));
+        ethStrategy.mint(alice, defaultProposerAmount);
+        ethStrategy.mint(bob, defaultProposerAmount);
+        ethStrategy.mint(charlie, defaultProposerAmount);
+        vm.stopPrank();
+        vm.prank(alice);
+        ethStrategy.delegate(alice);
+        vm.prank(bob);
+        ethStrategy.delegate(bob);
+        vm.prank(charlie);
+        ethStrategy.delegate(charlie);
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(dutchAuction);
+        uint256[] memory values = new uint256[](1);
+        values[0] = 0;
+        bytes[] memory calldatas = new bytes[](1);
+        calldatas[0] = abi.encodeWithSelector(
+            DutchAuction.startAuction.selector, 0, defaultDuration, defaultStartPrice, defaultEndPrice, defaultAmount
+        );
+        string memory description = "test";
+        vm.warp(block.timestamp + 1); // make delegated votes active
+        vm.startPrank(charlie);
+        vm.expectRevert(EthStrategy.GovernanceNotInitiated.selector);
+        ethStrategy.propose(targets, values, calldatas, description);
+    }
+
+    function test_initiateGovernance_success() public {
+        vm.startPrank(initialOwner.addr);
+        ethStrategy = new EthStrategy(
+            defaultTimelockDelay,
+            defaultQuorumPercentage,
+            defaultVoteExtension,
+            defaultVotingDelay,
+            defaultVotingPeriod,
+            defaultProposalThreshold
+        );
+        dutchAuction = new DutchAuction(address(ethStrategy), address(usdcToken), address(0));
+        ethStrategy.transferOwnership(address(ethStrategy));
+        vm.stopPrank();
+        vm.startPrank(address(ethStrategy));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(ethStrategy), ethStrategy.GOV_INIT_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin1.addr, dutchAuction.DA_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin2.addr, dutchAuction.DA_ADMIN_ROLE());
+        ethStrategy.initiateGovernance();
+        vm.stopPrank();
+
+        assertEq(ethStrategy.governanceInitiated(), true, "governance not initiated");
+    }
+
+    function test_initiateGovernance_revert_GovernanceAlreadyInitiated() public {
+        vm.startPrank(initialOwner.addr);
+        ethStrategy = new EthStrategy(
+            defaultTimelockDelay,
+            defaultQuorumPercentage,
+            defaultVoteExtension,
+            defaultVotingDelay,
+            defaultVotingPeriod,
+            defaultProposalThreshold
+        );
+        dutchAuction = new DutchAuction(address(ethStrategy), address(usdcToken), address(0));
+        ethStrategy.transferOwnership(address(ethStrategy));
+        vm.stopPrank();
+        vm.startPrank(address(ethStrategy));
+        ethStrategy.grantRoles(address(dutchAuction), ethStrategy.MINTER_ROLE());
+        ethStrategy.grantRoles(address(ethStrategy), ethStrategy.GOV_INIT_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin1.addr, dutchAuction.DA_ADMIN_ROLE());
+        dutchAuction.grantRoles(admin2.addr, dutchAuction.DA_ADMIN_ROLE());
+        ethStrategy.initiateGovernance();
+        vm.expectRevert(EthStrategy.GovernanceAlreadyInitiated.selector);
+        ethStrategy.initiateGovernance();
+        vm.stopPrank();
+
+        assertEq(ethStrategy.governanceInitiated(), true, "governance not initiated");
+    }
+
     function test_proposal_didNotReachQuorum() public {
         vm.startPrank(address(dutchAuction));
         ethStrategy.mint(alice, defaultProposerAmount * 94);

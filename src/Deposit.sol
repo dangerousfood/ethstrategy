@@ -21,7 +21,7 @@ contract Deposit is AtmAuction {
         AtmAuction(_ethStrategy, _paymentToken, _signer)
     {}
 
-    function _fill(uint128 amountOut, uint128 amountIn, uint64 startTime, uint64 duration) internal override {
+    function _fill(uint128 amountOut, uint256 amountIn, uint64 startTime, uint64 duration) internal override {
         super._fill(amountOut, amountIn, startTime, duration);
         if (amountIn > MAX_DEPOSIT) {
             revert DepositAmountTooHigh();
