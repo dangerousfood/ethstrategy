@@ -25,7 +25,7 @@ contract AtmAuctionTest is DutchAuctionTest {
     }
 
     function test_fill_success_1() public override {
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -75,7 +75,7 @@ contract AtmAuctionTest is DutchAuctionTest {
         vm.stopPrank();
 
         test_startAuction_success_1();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -100,7 +100,7 @@ contract AtmAuctionTest is DutchAuctionTest {
         vm.stopPrank();
 
         test_startAuction_success_1();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -138,7 +138,7 @@ contract AtmAuctionTest is DutchAuctionTest {
         vm.stopPrank();
 
         test_startAuction_success_1();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -181,7 +181,7 @@ contract AtmAuctionTest is DutchAuctionTest {
         uint64 _elapsedTime,
         uint128 _totalAmount
     ) public virtual override {
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             _amount, _startTime, _duration, _startPrice, _endPrice, _elapsedTime, dutchAuction.decimals()
         );
         mintAndApprove(alice, amountIn, address(dutchAuction), address(dutchAuction.paymentToken()));

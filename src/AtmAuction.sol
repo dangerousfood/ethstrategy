@@ -6,18 +6,19 @@ import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 import {IEthStrategy} from "./interfaces/IEthStrategy.sol";
 
 contract AtmAuction is DutchAuction {
+    /// @dev The error for when msg.value is less than amountIn
     error AmountInValueTooLow();
+
     /// @dev The constructor for the AtmAuction contract, initializes the DutchAuction contract
     /// @param _ethStrategy The address of the EthStrategy contract
     /// @param _paymentToken The address of the payment token
-
     constructor(address _ethStrategy, address _paymentToken, address _signer)
         DutchAuction(_ethStrategy, _paymentToken, _signer)
     {}
+
     /// @dev An internal override of the _fill function from DutchAuction, transfers the paymentToken to the owner() and mints the EthStrategy tokens to the filler
     /// @param amountOut The amount of EthStrategy tokens to be sold
     /// @param amountIn The amount of payment tokens to be paid by the filler
-
     function _fill(uint128 amountOut, uint256 amountIn, uint64, uint64) internal virtual override {
         address _paymentToken = paymentToken;
         if (_paymentToken == address(0)) {

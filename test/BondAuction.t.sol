@@ -26,7 +26,7 @@ contract BondAuctionTest is DutchAuctionTest {
     }
 
     function test_fill_success_1() public override {
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -56,7 +56,7 @@ contract BondAuctionTest is DutchAuctionTest {
             address(usdcToken)
         );
         super.test_fill_success_2();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             _amount,
             uint64(block.timestamp),
             defaultDuration,
@@ -110,7 +110,7 @@ contract BondAuctionTest is DutchAuctionTest {
         vm.prank(alice);
         vm.expectRevert(BondAuction.RedemptionWindowNotStarted.selector);
         bondAuction.redeem();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -133,7 +133,7 @@ contract BondAuctionTest is DutchAuctionTest {
         vm.prank(alice);
         vm.expectRevert(BondAuction.RedemptionWindowPassed.selector);
         bondAuction.redeem();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -174,7 +174,7 @@ contract BondAuctionTest is DutchAuctionTest {
         vm.warp(block.timestamp + defaultDuration + 1);
         vm.expectRevert(BondAuction.NoBondToWithdraw.selector);
         bondAuction.withdraw();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -195,7 +195,7 @@ contract BondAuctionTest is DutchAuctionTest {
         vm.expectRevert(BondAuction.RedemptionWindowNotStarted.selector);
         vm.prank(alice);
         bondAuction.withdraw();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -213,7 +213,7 @@ contract BondAuctionTest is DutchAuctionTest {
     function test_fill_unredeemedBond() public {
         uint64 expectedStartTime = uint64(block.timestamp);
         uint128 _amount = defaultAmount / 2;
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             _amount,
             uint64(block.timestamp),
             defaultDuration,
@@ -276,7 +276,7 @@ contract BondAuctionTest is DutchAuctionTest {
         uint64 _elapsedTime,
         uint128 _totalAmount
     ) public virtual override {
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             _amount, _startTime, _duration, _startPrice, _endPrice, _elapsedTime, dutchAuction.decimals()
         );
         mintAndApprove(alice, amountIn, address(dutchAuction), address(dutchAuction.paymentToken()));

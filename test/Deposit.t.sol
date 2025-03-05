@@ -43,7 +43,7 @@ contract DepositTest is DutchAuctionTest {
     }
 
     function test_fill_success_1() public override {
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -81,12 +81,6 @@ contract DepositTest is DutchAuctionTest {
             "usdcToken balance not assigned correctly"
         );
         assertEq(ethStrategy.balanceOf(alice), _amount, "ethStrategy balance not assigned correctly");
-    }
-
-    function test_startAuction_invalidStartPrice_1() public override {
-        // I'm not proud of myself for this one
-        defaultEndPrice = defaultEndPrice - 1;
-        super.test_startAuction_invalidStartPrice_1();
     }
 
     function test_fill_revert_DepositAmountTooHigh() public virtual {
@@ -159,24 +153,6 @@ contract DepositTest is DutchAuctionTest {
         Deposit(payable(dutchAuction)).initiateGovernance();
     }
 
-    function testFuzz_startPrice(uint128 _startPrice) public virtual override {
-        vm.assume(_startPrice > 0);
-        vm.assume(_startPrice >= defaultEndPrice);
-        vm.assume(_startPrice <= (type(uint128).max / defaultAmount));
-        uint128 amountIn = calculateAmountIn(
-            defaultAmount,
-            uint64(block.timestamp),
-            defaultDuration,
-            _startPrice,
-            defaultEndPrice,
-            uint64(block.timestamp),
-            dutchAuction.decimals()
-        );
-        vm.assume(amountIn < 100e18);
-        uint64 currentTime = uint64(block.timestamp);
-        fill(defaultAmount - 1, currentTime, defaultDuration, _startPrice, defaultEndPrice, currentTime, defaultAmount);
-    }
-
     function fill(
         uint128 _amount,
         uint64 _startTime,
@@ -186,7 +162,7 @@ contract DepositTest is DutchAuctionTest {
         uint64 _elapsedTime,
         uint128 _totalAmount
     ) public virtual override {
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             _amount, _startTime, _duration, _startPrice, _endPrice, _elapsedTime, dutchAuction.decimals()
         );
         mintAndApprove(alice, amountIn, address(dutchAuction), address(dutchAuction.paymentToken()));
@@ -200,5 +176,100 @@ contract DepositTest is DutchAuctionTest {
         address filler = 0x2Fc9478c3858733b6e9b87458D71044A2071a300;
         mintAndApprove(filler, defaultAmount, address(dutchAuction), address(dutchAuction.paymentToken()));
         super.test_whitelist_example_signature();
+    }
+
+    function testFuzz_endPrice(uint128 _endPrice) public virtual override {
+        vm.assume(_endPrice > 0);
+        vm.assume(_endPrice == defaultStartPrice);
+        uint64 currentTime = uint64(block.timestamp);
+        fill(defaultAmount - 1, currentTime, defaultDuration, defaultStartPrice, _endPrice, currentTime, defaultAmount);
+    }
+
+    function test_startAuction_amountStartPriceOverflow() public override {
+        vm.startPrank(admin1.addr);
+        vm.expectRevert(Deposit.InvalidStartEndPriceForDeposit.selector);
+        dutchAuction.startAuction(
+            uint64(block.timestamp),
+            defaultDuration,
+            (type(uint256).max / defaultAmount) + 1,
+            defaultEndPrice,
+            defaultAmount
+        );
+        vm.stopPrank();
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
+            dutchAuction.auction();
+        assertEq(startTime, uint64(0), "startTime not assigned correctly");
+        assertEq(duration, 0, "duration not assigned correctly");
+        assertEq(startPrice, 0, "startPrice not assigned correctly");
+        assertEq(endPrice, 0, "endPrice not assigned correctly");
+        assertEq(amount, 0, "amount not assigned correctly");
+    }
+
+    function test_startAuction_invalidStartPrice_1() public override {
+        vm.startPrank(admin1.addr);
+        vm.expectRevert(Deposit.InvalidStartEndPriceForDeposit.selector);
+        dutchAuction.startAuction(
+            uint64(block.timestamp), defaultDuration, defaultEndPrice, defaultStartPrice + 1, defaultAmount
+        );
+        vm.stopPrank();
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
+            dutchAuction.auction();
+        assertEq(startTime, uint64(0), "startTime not assigned correctly");
+        assertEq(duration, 0, "duration not assigned correctly");
+        assertEq(startPrice, 0, "startPrice not assigned correctly");
+        assertEq(endPrice, 0, "endPrice not assigned correctly");
+        assertEq(amount, 0, "amount not assigned correctly");
+    }
+
+    function test_startAuction_invalidStartPrice_2() public override {
+        vm.startPrank(admin1.addr);
+        vm.expectRevert(Deposit.InvalidStartEndPriceForDeposit.selector);
+        dutchAuction.startAuction(uint64(block.timestamp), defaultDuration, defaultStartPrice, 0, defaultAmount);
+        vm.stopPrank();
+        (uint64 startTime, uint64 duration, uint128 amount, uint256 startPrice, uint256 endPrice) =
+            dutchAuction.auction();
+        assertEq(startTime, uint64(0), "startTime not assigned correctly");
+        assertEq(duration, 0, "duration not assigned correctly");
+        assertEq(startPrice, 0, "startPrice not assigned correctly");
+        assertEq(endPrice, 0, "endPrice not assigned correctly");
+        assertEq(amount, 0, "amount not assigned correctly");
+    }
+
+    function testFuzz_startPrice(uint128 _startPrice) public override {
+        /// @dev intentionally left empty as the inherited test is not valid for Deposit
+    }
+
+    function testFuzz_fill(
+        uint128 _amountIn,
+        uint64 _startTime,
+        uint64 _duration,
+        uint128 _startPrice,
+        uint128 _endPrice,
+        uint64 _elapsedTime,
+        uint128 _totalAmount
+    ) public virtual override {
+        uint256 currentTime = block.timestamp;
+        vm.assume(_amountIn > 0);
+        vm.assume(_startTime > currentTime);
+        vm.assume(_startTime < currentTime + _duration);
+        vm.assume(_startTime < currentTime + dutchAuction.MAX_START_TIME_WINDOW());
+        vm.assume(_duration > 0);
+        vm.assume(_duration < dutchAuction.MAX_DURATION());
+        bound(_startPrice, 1, type(uint256).max);
+        vm.assume(_startPrice > 0);
+        vm.assume(_startPrice <= (type(uint128).max / defaultAmount));
+        vm.assume(_elapsedTime >= _startTime);
+        vm.assume(_elapsedTime < _startTime + _duration);
+        vm.assume(_totalAmount > 0);
+        vm.assume(_totalAmount <= type(uint128).max / defaultStartPrice);
+        vm.assume(_startPrice < type(uint128).max / _totalAmount);
+
+        uint128 amountOut = calculateAmountOut(
+            _amountIn, _startTime, _duration, _startPrice, _startPrice, _elapsedTime, dutchAuction.decimals()
+        );
+        vm.assume(amountOut > 0);
+        vm.assume(amountOut < _totalAmount);
+
+        fill(amountOut, _startTime, _duration, _startPrice, _startPrice, _elapsedTime, _totalAmount);
     }
 }

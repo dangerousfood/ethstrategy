@@ -238,6 +238,15 @@ contract NavOptionsTest is BaseTest {
         navOptions.addNavToken(address(usdcToken));
     }
 
+    function test_addNavToken_revert_InvalidNavToken() public {
+        vm.startPrank(address(ethStrategy));
+        navOptions.grantRoles(alice, navOptions.NAV_ADMIN_ROLE());
+        vm.stopPrank();
+        vm.expectRevert(NavOptions.InvalidNavToken.selector);
+        vm.prank(alice);
+        navOptions.addNavToken(address(0));
+    }
+
     function test_removeNavToken_success_1() public {
         addNavToken(address(usdcToken));
         addNavToken(address(address(2)));

@@ -164,7 +164,7 @@ contract DutchAuctionTest is BaseTest {
         assertEq(amount, 0, "amount not assigned correctly");
     }
 
-    function test_startAuction_invalidStartPrice_2() public {
+    function test_startAuction_invalidStartPrice_2() public virtual {
         vm.startPrank(admin1.addr);
         vm.expectRevert(DutchAuction.InvalidStartPrice.selector);
         dutchAuction.startAuction(uint64(block.timestamp), defaultDuration, defaultStartPrice, 0, defaultAmount);
@@ -178,7 +178,7 @@ contract DutchAuctionTest is BaseTest {
         assertEq(amount, 0, "amount not assigned correctly");
     }
 
-    function test_startAuction_amountStartPriceOverflow() public {
+    function test_startAuction_amountStartPriceOverflow() public virtual {
         vm.startPrank(admin1.addr);
         vm.expectRevert(DutchAuction.AmountStartPriceOverflow.selector);
         dutchAuction.startAuction(
@@ -227,7 +227,7 @@ contract DutchAuctionTest is BaseTest {
     // fill the max amount (deletes the auction and emits AuctionEndedEarly)
     function test_fill_success_1() public virtual {
         test_startAuction_success_1();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -255,7 +255,7 @@ contract DutchAuctionTest is BaseTest {
     // fill less than the max amount
     function test_fill_success_2() public virtual {
         test_startAuction_success_1();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount - 1,
             uint64(block.timestamp),
             defaultDuration,
@@ -419,7 +419,7 @@ contract DutchAuctionTest is BaseTest {
     function test_getAmountIn_success() public {
         test_startAuction_success_1();
         uint256 amountIn = dutchAuction.getAmountIn(defaultAmount, uint64(block.timestamp));
-        uint128 expectedAmountIn = calculateAmountIn(
+        uint256 expectedAmountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -435,7 +435,7 @@ contract DutchAuctionTest is BaseTest {
         vm.prank(admin1.addr);
         dutchAuction.setSigner(signer.addr);
         test_startAuction_success_1();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount / 2,
             uint64(block.timestamp),
             defaultDuration,
@@ -460,7 +460,7 @@ contract DutchAuctionTest is BaseTest {
         vm.prank(admin1.addr);
         dutchAuction.setSigner(signer.addr);
         test_startAuction_success_1();
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -511,7 +511,7 @@ contract DutchAuctionTest is BaseTest {
         address filler = 0x2Fc9478c3858733b6e9b87458D71044A2071a300;
         bytes memory signature =
             hex"85f7247810d04fd78e94915ca7a46e108f55cb0c3c2b9715cfbef293a62c3f9109fcca42b389a4c9ce7348059cd5103a252ab8125c2a648bd6f0ce12718ed1a71c";
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             defaultAmount,
             uint64(block.timestamp),
             defaultDuration,
@@ -537,31 +537,20 @@ contract DutchAuctionTest is BaseTest {
         uint128 _totalAmount
     ) public virtual {
         uint256 currentTime = block.timestamp;
-        // bound(_amountIn, 1, type(uint128).max);
         vm.assume(_amountIn > 0);
-        // vm.assume(_amountIn < type(uint128).max / 1e18);
-        // bound(_startTime, currentTime, currentTime + _duration);
         vm.assume(_startTime > currentTime);
         vm.assume(_startTime < currentTime + _duration);
         vm.assume(_startTime < currentTime + dutchAuction.MAX_START_TIME_WINDOW());
-        // bound(_duration, 1, maxDuration);
         vm.assume(_duration > 0);
         vm.assume(_duration < dutchAuction.MAX_DURATION());
-
-        bound(_startPrice, 1, type(uint128).max);
-        // vm.assume(_startPrice > 0);
+        bound(_startPrice, 1, type(uint256).max);
         vm.assume(_startPrice <= (type(uint128).max / defaultAmount));
-
         vm.assume(_endPrice > 0);
         vm.assume(_endPrice <= _startPrice);
-
         vm.assume(_elapsedTime >= _startTime);
         vm.assume(_elapsedTime < _startTime + _duration);
-
         vm.assume(_totalAmount > 0);
-        // vm.assume(_totalAmount > _amount);
         vm.assume(_totalAmount <= type(uint128).max / defaultStartPrice);
-
         vm.assume(_startPrice < type(uint128).max / _totalAmount);
 
         uint128 amountOut = calculateAmountOut(
@@ -671,7 +660,7 @@ contract DutchAuctionTest is BaseTest {
         assertEq(amount, _totalAmount, "amount not assigned correctly");
 
         vm.warp(_elapsedTime);
-        uint128 amountIn = calculateAmountIn(
+        uint256 amountIn = calculateAmountIn(
             _amount, _startTime, _duration, _startPrice, _endPrice, _elapsedTime, dutchAuction.decimals()
         );
 
