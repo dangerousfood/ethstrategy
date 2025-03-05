@@ -33,7 +33,7 @@ contract EthStrategy is
     error ProposalNotQueued();
     /// @dev The error for when a user voted for a proposal (or abstained) and is attempting to rageQuit
     error ForVotesCannotRageQuit();
-    /// @dev The error for when the amount of shares to burn in a rageQuitexceeds the user's balance when they cast their votes
+    /// @dev The error for when the amount of shares to burn in a rageQuit exceeds the user's balance when they cast their votes
     error AmountExceedsPastBalance();
     /// @dev The rageQuit error for when the assets array is empty
     error AssetsArrayEmpty();
