@@ -49,6 +49,8 @@ contract EthStrategy is
     error GovernanceNotInitiated();
     /// @dev The error for when governance is already initiated and the GOV_INIT_ADMIN_ROLE attempts to initiate it again
     error GovernanceAlreadyInitiated();
+    /// @dev The error for when a user attempts to add a duplicate token to the rageQuit
+    error DuplicateToken();
 
     /// @dev The event for when the execution delay is set
     event ExecutionDelaySet(uint256 oldExecutionDelay, uint256 newExecutionDelay);
@@ -286,6 +288,15 @@ contract EthStrategy is
         uint256 len = assets.length;
         bool transferOcurred = false;
         for (; i < len;) {
+            /// @dev adding 1 to the slot to prevent collisions with the reentrancy guard
+            bytes32 slot = bytes32(uint256(uint160(assets[i])) + 1);
+            assembly {
+                if tload(slot) {
+                    mstore(0x00, 0x464e3f6a) // `DuplicateToken()`.
+                    revert(0x1c, 0x04)
+                }
+                tstore(slot, 1)
+            }
             address asset = assets[i];
             uint256 _balance;
             if (asset == address(0)) {

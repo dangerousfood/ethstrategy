@@ -336,6 +336,35 @@ contract EthStrategyGovernorTest is BaseTest {
         assertEq(ethStrategy.totalSupply(), defaultAmount, "ethStrategy totalSupply not assigned correctly");
     }
 
+    function test_rageQuit_revert_DuplicateToken_1() public {
+        setIsTransferPaused(true);
+        mintAndDelegate(alice, alice, defaultAmount);
+        mintAndDelegate(bob, bob, defaultAmount);
+        usdcToken.mint(address(ethStrategy), defaultAmount);
+        vm.deal(address(ethStrategy), defaultAmount);
+        address[] memory assets = new address[](2);
+        assets[0] = address(usdcToken);
+        assets[1] = address(usdcToken);
+        vm.expectRevert(EthStrategy.DuplicateToken.selector);
+        vm.prank(alice);
+        ethStrategy.rageQuit(defaultAmount, 0, assets);
+    }
+
+    function test_rageQuit_revert_DuplicateToken_2() public {
+        setIsTransferPaused(true);
+        mintAndDelegate(alice, alice, defaultAmount);
+        mintAndDelegate(bob, bob, defaultAmount);
+        usdcToken.mint(address(ethStrategy), defaultAmount);
+        vm.deal(address(ethStrategy), defaultAmount);
+        address[] memory assets = new address[](3);
+        assets[0] = address(usdcToken);
+        assets[1] = address(0);
+        assets[2] = address(usdcToken);
+        vm.expectRevert(EthStrategy.DuplicateToken.selector);
+        vm.prank(alice);
+        ethStrategy.rageQuit(defaultAmount, 0, assets);
+    }
+
     function test_rageQuit_votedAgainst_success() public {
         setIsTransferPaused(false);
         mintAndDelegate(alice, alice, defaultProposerAmount);

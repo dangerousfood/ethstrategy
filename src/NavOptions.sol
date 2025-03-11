@@ -51,7 +51,7 @@ contract NavOptions is OwnableRoles, ERC20, TReentrancyGuard {
         _mint(_to, _amount);
     }
 
-    /// @notice A function to redeem options (oETHxr), oETHxr is burned and the redeemer pays a proportional value of navTokens to the EthStrategy contract and recieves ETHXR
+    /// @notice A function to redeem options (oETHxr), oETHxr is burned and the redeemer pays a proportional value of navTokens to the EthStrategy contract and receives ETHXR
     /// @param _amount The amount of options to redeem
     function redeem(uint256 _amount) external payable nonreentrant {
         IEthStrategy ethStrategy = IEthStrategy(ETH_STRATEGY);
