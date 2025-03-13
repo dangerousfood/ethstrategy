@@ -51,6 +51,8 @@ contract EthStrategy is
     error GovernanceAlreadyInitiated();
     /// @dev The error for when a user attempts to add a duplicate token to the rageQuit
     error DuplicateToken();
+    /// @dev The error for when a user attempts to rageQuit but the amount of shares they have burned in rageQuits exceeds their past balance
+    error PastRageQuitAndAmountExceedsPastBalance();
 
     /// @dev The event for when the execution delay is set
     event ExecutionDelaySet(uint256 oldExecutionDelay, uint256 newExecutionDelay);
@@ -70,6 +72,8 @@ contract EthStrategy is
     bool public governanceInitiated = false;
     /// @dev Maps proposal ids to voter's support of the proposal
     mapping(uint256 => mapping(address => uint8)) public proposalSupport;
+    /// @dev Maps addresses to the amount of shares they have burned in rageQuits
+    mapping(address => mapping(uint256 => uint256)) public rageQuits;
 
     /// @notice The constructor for EthStrategy
     /// @param _executionDelay The execution delay for the governor (in seconds) the time after a proposal succeeds before it can be executed
@@ -272,13 +276,23 @@ contract EthStrategy is
                     revert(0x1c, 0x04)
                 }
             }
+            uint256 pastBalance = getPastBalanceOf(msg.sender, timepoint);
             // @dev the user's balance at the timepoint of the proposal must be greater than or equal to the amount of shares they are attempting to burn
-            if (getPastBalanceOf(msg.sender, timepoint) < amount) {
+            if (pastBalance < amount) {
                 assembly {
                     mstore(0x00, 0x811fb878) // `AmountExceedsPastBalance()`.
                     revert(0x1c, 0x04)
                 }
             }
+            uint256 pastRageQuit = rageQuits[msg.sender][proposalId];
+            if (pastRageQuit + amount > pastBalance) {
+                assembly {
+                    mstore(0x00, 0xcb164966) // `PastRageQuitAndAmountExceedsPastBalance()`.
+                    revert(0x1c, 0x04)
+                }
+            }
+            // @dev update the amount of shares the user will burn in the rageQuit
+            rageQuits[msg.sender][proposalId] += amount;
         }
         // @dev caching the totalSupply before _burn changes the value
         uint256 _totalSupply = totalSupply();

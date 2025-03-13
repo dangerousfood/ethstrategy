@@ -409,6 +409,10 @@ contract EthStrategyGovernorTest is BaseTest {
             "proposer's ethStrategy balance not assigned correctly"
         );
         assertEq(ethStrategy.totalSupply(), defaultProposerAmount * 3, "ethStrategy totalSupply not assigned correctly");
+        assertEq(
+            ethStrategy.rageQuits(alice, proposalId), defaultProposerAmount, "alice's rageQuits not assigned correctly"
+        );
+        assertEq(ethStrategy.rageQuits(bob, proposalId), 0, "bob's rageQuits not assigned correctly");
     }
     /// @dev rageQuit after the execution delay has passed
 
@@ -821,6 +825,32 @@ contract EthStrategyGovernorTest is BaseTest {
         vm.prank(alice);
         ethStrategy.rageQuit(defaultProposerAmount, 0, assets);
         assertEq(ethStrategy.balanceOf(alice), defaultProposerAmount, "balance not assigned correctly");
+    }
+
+    function test_rageQuit_revert_PastRageQuitAndAmountExceedsPastBalance() public {
+        setIsTransferPaused(false);
+        mintAndDelegate(alice, alice, defaultProposerAmount);
+        mintAndDelegate(bob, bob, defaultProposerAmount);
+        mintAndDelegate(charlie, charlie, defaultProposerAmount);
+        (uint256 proposalId,,,,) = setupDefaultDutchAuctionProposal();
+        vm.prank(alice);
+        ethStrategy.castVote(proposalId, uint8(GovernorCountingSimple.VoteType.Against));
+        vm.prank(bob);
+        ethStrategy.castVote(proposalId, uint8(GovernorCountingSimple.VoteType.For));
+        vm.prank(charlie);
+        ethStrategy.castVote(proposalId, uint8(GovernorCountingSimple.VoteType.For));
+        vm.warp(block.timestamp + ethStrategy.votingPeriod() + 1);
+
+        usdcToken.mint(address(ethStrategy), defaultAmount);
+        vm.deal(address(ethStrategy), defaultAmount);
+        address[] memory assets = new address[](2);
+        assets[0] = address(usdcToken);
+        assets[1] = address(0);
+        vm.prank(alice);
+        ethStrategy.rageQuit(defaultProposerAmount - 1, proposalId, assets);
+        vm.expectRevert(EthStrategy.PastRageQuitAndAmountExceedsPastBalance.selector);
+        vm.prank(alice);
+        ethStrategy.rageQuit(2, proposalId, assets);
     }
 
     function test_rageQuit_revert_AmountExceedsPastBalance() public {
