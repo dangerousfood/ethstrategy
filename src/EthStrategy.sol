@@ -188,8 +188,9 @@ contract EthStrategy is
 
     /// @inheritdoc Governor
     /// @dev This function is overridden to calculate the eta for a proposal (including the execution delay))
-    function proposalEta(uint256 proposalId) public view virtual override returns (uint256) {
-        return proposalDeadline(proposalId) + executionDelay;
+    function proposalEta(uint256 proposalId) public view virtual override returns (uint256 eta) {
+        eta = proposalDeadline(proposalId) + executionDelay;
+        if (eta < block.timestamp) eta = 0;
     }
 
     /// @inheritdoc GovernorVotesQuorumFraction

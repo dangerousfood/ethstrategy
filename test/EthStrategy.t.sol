@@ -365,7 +365,7 @@ contract EthStrategyGovernorTest is BaseTest {
         ethStrategy.rageQuit(defaultAmount, 0, assets);
     }
 
-    function test_rageQuit_votedAgainst_success() public {
+    function test_rageQuit_votedAgainst_1() public {
         setIsTransferPaused(false);
         mintAndDelegate(alice, alice, defaultProposerAmount);
         mintAndDelegate(bob, bob, defaultProposerAmount);
@@ -409,6 +409,31 @@ contract EthStrategyGovernorTest is BaseTest {
             "proposer's ethStrategy balance not assigned correctly"
         );
         assertEq(ethStrategy.totalSupply(), defaultProposerAmount * 3, "ethStrategy totalSupply not assigned correctly");
+    }
+    /// @dev rageQuit after the execution delay has passed
+
+    function test_rageQuit_succeeded_revert_ProposalNotQueued() public {
+        setIsTransferPaused(false);
+        mintAndDelegate(alice, alice, defaultProposerAmount);
+        mintAndDelegate(bob, bob, defaultProposerAmount);
+        mintAndDelegate(charlie, charlie, defaultProposerAmount);
+        (uint256 proposalId,,,,) = setupDefaultDutchAuctionProposal();
+        vm.prank(alice);
+        ethStrategy.castVote(proposalId, uint8(GovernorCountingSimple.VoteType.Against));
+        vm.prank(bob);
+        ethStrategy.castVote(proposalId, uint8(GovernorCountingSimple.VoteType.For));
+        vm.prank(charlie);
+        ethStrategy.castVote(proposalId, uint8(GovernorCountingSimple.VoteType.For));
+        vm.warp(block.timestamp + ethStrategy.votingPeriod() + ethStrategy.executionDelay() + 1);
+
+        usdcToken.mint(address(ethStrategy), defaultAmount);
+        vm.deal(address(ethStrategy), defaultAmount);
+        address[] memory assets = new address[](2);
+        assets[0] = address(usdcToken);
+        assets[1] = address(0);
+        vm.prank(alice);
+        vm.expectRevert(EthStrategy.ProposalNotQueued.selector);
+        ethStrategy.rageQuit(defaultProposerAmount, proposalId, assets);
     }
 
     function test_rageQuit_votedFor_revert_ForVotesCannotRageQuit() public {
