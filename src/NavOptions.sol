@@ -132,18 +132,17 @@ contract NavOptions is OwnableRoles, ERC20, TReentrancyGuard {
                 codeHash := extcodehash(navToken)
             }
             if (codeHash != bytes32(0)) {
-                try ERC20(navToken).balanceOf(_owner) returns (uint256 _balance) {
-                    if (_balance != 0) {
-                        uint256 proportion = (_balance * _amount) / totalSupply;
-                        if (proportion == 0) {
-                            proportion = 1;
-                        }
-                        navValues[newLen] = NavValue({token: navToken, value: proportion});
-                        unchecked {
-                            ++newLen;
-                        }
+                uint256 _balance = ERC20(navToken).balanceOf(_owner);
+                if (_balance != 0) {
+                    uint256 proportion = (_balance * _amount) / totalSupply;
+                    if (proportion == 0) {
+                        proportion = 1;
                     }
-                } catch {}
+                    navValues[newLen] = NavValue({token: navToken, value: proportion});
+                    unchecked {
+                        ++newLen;
+                    }
+                }
             }
             unchecked {
                 ++i;

@@ -167,14 +167,9 @@ contract NavOptionsTest is BaseTest {
         ethStrategy.mint(bob, 100e18);
         vm.startPrank(alice);
         usdcToken.transfer(address(ethStrategy), 50e18);
+        vm.expectRevert();
         navOptions.redeem{value: 50e18}(100e18);
         vm.stopPrank();
-        assertEq(navOptions.balanceOf(alice), 0, "balance not assigned correctly");
-        assertEq(ethStrategy.balanceOf(alice), 100e18, "balance not assigned correctly");
-        assertEq(usdcToken.balanceOf(alice), 0, "balance not assigned correctly");
-        assertEq(usdcToken.balanceOf(address(ethStrategy)), 100e18, "balance not assigned correctly");
-        assertEq(address(ethStrategy).balance, 100e18, "balance not assigned correctly");
-        assertEq(alice.balance, 0, "balance not assigned correctly");
     }
 
     function test_getNavValue_success_1() public {

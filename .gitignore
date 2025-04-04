@@ -19,3 +19,5 @@ lcov.info
 report/
 
 .env
+
+.vscode/*
