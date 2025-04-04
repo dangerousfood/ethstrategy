@@ -59,12 +59,13 @@ contract NavOptions is OwnableRoles, ERC20, TReentrancyGuard {
         _burn(msg.sender, _amount);
         uint256 i = 0;
         uint256 len = navValues.length;
+        uint256 refund = 0;
         for (; i < len;) {
             NavValue memory navValue = navValues[i];
             if (navValue.token == address(0)) {
                 SafeTransferLib.safeTransferETH(address(ethStrategy), navValue.value);
                 if (navValue.value < msg.value) {
-                    SafeTransferLib.safeTransferETH(msg.sender, msg.value - navValue.value);
+                    refund += msg.value - navValue.value;
                 }
             } else {
                 SafeTransferLib.safeTransferFrom(navValue.token, msg.sender, address(ethStrategy), navValue.value);
@@ -74,6 +75,9 @@ contract NavOptions is OwnableRoles, ERC20, TReentrancyGuard {
             }
         }
         ethStrategy.mint(msg.sender, _amount);
+        if (refund > 0) {
+            SafeTransferLib.safeTransferETH(msg.sender, refund);
+        }
     }
 
     /// @notice A function to get the nav value for option redemption

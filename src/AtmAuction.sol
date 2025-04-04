@@ -21,6 +21,7 @@ contract AtmAuction is DutchAuction {
     /// @param amountIn The amount of payment tokens to be paid by the filler
     function _fill(uint128 amountOut, uint256 amountIn, uint64, uint64) internal virtual override {
         address _paymentToken = paymentToken;
+        uint256 refund = 0;
         if (_paymentToken == address(0)) {
             if (msg.value < amountIn) {
                 revert AmountInValueTooLow();
@@ -28,12 +29,14 @@ contract AtmAuction is DutchAuction {
 
             SafeTransferLib.safeTransferETH(owner(), amountIn);
             if (msg.value > amountIn) {
-                uint256 refund = msg.value - amountIn;
-                SafeTransferLib.safeTransferETH(msg.sender, refund);
+                refund = msg.value - amountIn;
             }
         } else {
             SafeTransferLib.safeTransferFrom(_paymentToken, msg.sender, owner(), amountIn);
         }
         IEthStrategy(ethStrategy).mint(msg.sender, amountOut);
+        if (refund > 0) {
+            SafeTransferLib.safeTransferETH(msg.sender, refund);
+        }
     }
 }
